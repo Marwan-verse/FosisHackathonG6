@@ -41,7 +41,7 @@ planets = {
         "radius": 10,
         "orbit": 100,
         "speed": 0.02,
-        "image": "mercury.png",  # Add your pixel art filenames here
+        "image": "Murcury.png",  # Changed from "mercury.png" to "Murcury.png"
         "info": [
             "Mercury - The Smallest Planet",
             "Temperature: -180°C to 430°C",
@@ -398,6 +398,61 @@ class Asteroid:
 
     def check_collision(self, x, y, size):
         return math.sqrt((self.x - x)**2 + (self.y - y)**2) < self.size + size
+
+class Comet:
+    def __init__(self):
+        # Determine spawn position (from edges only)
+        if random() < 0.5:
+            self.x = 0 if random() < 0.5 else WIDTH
+            self.y = randint(0, HEIGHT)
+        else:
+            self.x = randint(0, WIDTH)
+            self.y = 0 if random() < 0.5 else HEIGHT
+        
+        # Slower speed range (was originally faster)
+        self.speed = random() * 2 + 1  # Speed between 1 and 3
+        
+        # Calculate target point avoiding middle area
+        center_x = WIDTH // 2
+        center_y = HEIGHT // 2
+        avoid_radius = 200  # Radius of area to avoid around center
+        
+        while True:
+            target_x = randint(0, WIDTH)
+            target_y = randint(0, HEIGHT)
+            # Check if target is too close to center
+            dist_to_center = math.sqrt((target_x - center_x)**2 + (target_y - center_y)**2)
+            if dist_to_center > avoid_radius:
+                break
+        
+        # Calculate angle towards target
+        self.angle = math.degrees(math.atan2(target_y - self.y, target_x - self.x))
+        
+        # Trail properties
+        self.trail = []
+        self.trail_length = 20
+        self.size = random() * 2 + 1  # Comet size between 1 and 3
+
+    def update(self):
+        # Update position
+        self.x += math.cos(math.radians(self.angle)) * self.speed
+        self.y += math.sin(math.radians(self.angle)) * self.speed
+        
+        # Update trail
+        self.trail.append((self.x, self.y))
+        if len(self.trail) > self.trail_length:
+            self.trail.pop(0)
+
+    def draw(self, screen):
+        # Draw trail with fade effect
+        if len(self.trail) > 2:
+            for i in range(len(self.trail) - 1):
+                alpha = int(255 * (i / len(self.trail)))
+                pygame.draw.line(screen, (255, 255, 255, alpha),
+                               self.trail[i], self.trail[i + 1], 2)
+        
+        # Draw comet head
+        pygame.draw.circle(screen, WHITE, (int(self.x), int(self.y)), int(self.size))
 
 class Rocket:
     def __init__(self):
@@ -1061,6 +1116,8 @@ class SpaceExplorer:
             'color': (100, 100, 200),
             'hover': False
         }
+        self.comets = []
+        self.comet_spawn_timer = 0
 
     def reset_rocket_position(self):
         if not self.planet_view:
@@ -1366,6 +1423,24 @@ class SpaceExplorer:
                     self.cooldown -= 1
                 else:
                     if not self.planet_view:
+                        # Update comets
+                        self.comet_spawn_timer -= 1
+                        if self.comet_spawn_timer <= 0 and len(self.comets) < 3:  # Maximum 3 comets at once
+                            if random() < 0.05:  # 5% chance to spawn a comet
+                                self.comets.append(Comet())
+                                self.comet_spawn_timer = randint(120, 240)  # Wait 2-4 seconds before checking again
+                        
+                        # Update existing comets
+                        for comet in self.comets[:]:
+                            comet.update()
+                            if (comet.x < -50 or comet.x > WIDTH + 50 or 
+                                comet.y < -50 or comet.y > HEIGHT + 50):
+                                self.comets.remove(comet)
+                        
+                        # Draw comets
+                        for comet in self.comets:
+                            comet.draw(screen)
+                        
                         # Update asteroids
                         if len(self.asteroids) < MAX_ASTEROIDS and random() < ASTEROID_SPAWN_RATE:
                             self.asteroids.append(Asteroid())
@@ -1385,12 +1460,6 @@ class SpaceExplorer:
                             # Check collision with rocket
                             if asteroid.check_collision(self.rocket.x, self.rocket.y, self.rocket.size):
                                 self.reset_rocket_position()
-                                if asteroid in self.asteroids:
-                                    self.asteroids.remove(asteroid)
-
-                            # Remove asteroids that are far off screen
-                            if (asteroid.x < -100 or asteroid.x > WIDTH + 100 or 
-                                asteroid.y < -100 or asteroid.y > HEIGHT + 100):
                                 if asteroid in self.asteroids:
                                     self.asteroids.remove(asteroid)
 
@@ -1421,6 +1490,9 @@ class SpaceExplorer:
                     for planet in self.planets:
                         planet.update()
                         planet.draw(screen)
+                    # Draw comets
+                    for comet in self.comets:
+                        comet.draw(screen)
                     # Draw asteroids
                     for asteroid in self.asteroids:
                         asteroid.draw(screen)
