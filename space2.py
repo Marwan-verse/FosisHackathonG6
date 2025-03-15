@@ -4,8 +4,6 @@ import sys
 from random import randint, choice, random
 import time
 import os
-from earth_platformer import EarthPlatformer
-from planet_platformer import PlanetPlatformer, Player
 
 # Initialize Pygame
 pygame.init()
@@ -23,7 +21,7 @@ YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 ORANGE = (255, 165, 0)
-STAR_COLORS = [(255, 255, 255), (200, 200, 255), (255, 200, 200), (255, 255, 200)]
+STAR_COLORS = [(255, 255, 255), (255, 255, 200), (200, 200, 255), (255, 200, 200)]
 
 # Add after other constants
 ASSETS_DIR = "assets"  # Create this directory to store your pixel art images
@@ -38,134 +36,94 @@ BULLET_LIFETIME = 60  # frames
 
 # Planet data with extended information
 planets = {
-    "Sun": {
-        "color": (255, 200, 50),  # Bright yellow
-        "radius": 40,
-        "orbit": 0,
-        "speed": 0,
-        "image": "Sun.png",
-        "stage2_image": "SunStage2.png",
-        "info": [
-            "The Sun - Our Star",
-            "Temperature: 5,500°C (surface)",
-            "Age: 4.6 billion years",
-            "Type: Yellow Dwarf Star",
-            "Contains 99.86% of solar system's mass",
-            "Powered by nuclear fusion"
-        ]
-    },
     "Mercury": {
-        "color": (169, 169, 169),  # Gray
+        "color": (169, 169, 169),  # Grey
         "radius": 10,
         "orbit": 100,
         "speed": 0.02,
-        "image": "Murcury.png",  # Small image for solar system view
-        "stage2_image": "MercuryStage2.png",  # Large image for planet screen
+        "image": "mercury.png",  # Add your pixel art filenames here
         "info": [
-            "Mercury is the smallest and innermost planet in our Solar System. Its surface is heavily cratered, resembling Earth's Moon. The planet experiences extreme temperature variations, from scorching 430°C during the day to -180°C at night.",
-            
-            "Mercury has no atmosphere to speak of, just a thin exosphere made mostly of oxygen, sodium, hydrogen, helium, and potassium. This lack of atmosphere means there's no weather and no protection from meteoroid impacts.",
-            
-            "Despite being the closest planet to the Sun, Mercury is not the hottest planet - that's Venus. Mercury's orbit is highly elliptical, and it completes three rotations for every two orbits around the Sun.",
-            
-            "Mercury's core makes up about 55% of its volume, the largest core-to-planet ratio in the Solar System. This large iron core generates a magnetic field about 1% as strong as Earth's.",
-            
-            "The planet's surface is covered in wrinkles called scarps, formed as Mercury's core cooled and shrank. These scarps can be up to a mile high and hundreds of miles long."
+            "Mercury - The Smallest Planet",
+            "Temperature: -180°C to 430°C",
+            "No moons",
+            "Closest planet to the Sun",
+            "Year length: 88 Earth days",
+            "No atmosphere"
         ]
     },
     "Venus": {
-        "color": (218, 165, 32),  # Golden
+        "color": (255, 198, 73),  # Yellow-orange
         "radius": 15,
         "orbit": 150,
         "speed": 0.015,
-        "image": "Venus.png",
-        "stage2_image": "VenusStage2.png",
+        "image": "venus.png",  # Add your pixel art filenames here
         "info": [
-            "Venus is often called Earth's twin due to their similar size and mass, but it's a hostile world with surface temperatures hot enough to melt lead - around 462°C. This extreme heat is caused by a runaway greenhouse effect.",
-            
-            "The planet's thick atmosphere is primarily carbon dioxide, with clouds of sulfuric acid. The atmospheric pressure at the surface is 90 times greater than Earth's, equivalent to the pressure at 900 meters under Earth's oceans.",
-            
-            "Venus rotates backwards compared to most other planets, and its day is longer than its year. One Venusian day takes 243 Earth days, while it orbits the Sun in 225 Earth days.",
-            
-            "The surface of Venus is relatively young, reshaped by volcanic activity about 300-500 million years ago. The planet has more volcanoes than any other planet in the Solar System.",
-            
-            "Venus has no moons and no magnetic field. The lack of a magnetic field means the solar wind interacts directly with the atmosphere, causing some of it to escape into space."
+            "Venus - The Hottest Planet",
+            "Temperature: 462°C",
+            "Rotates backwards",
+            "Similar size to Earth",
+            "Thick atmosphere of CO2",
+            "No moons"
         ]
     },
     "Earth": {
-        "color": (34, 139, 34),  # Green
+        "color": (100, 149, 237),  # Cornflower blue
         "radius": 18,
         "orbit": 200,
         "speed": 0.01,
-        "image": "Earth.png",
-        "stage2_image": "EarthStage2.png",
+        "image": "earth.png",  # Add your pixel art filenames here
         "info": [
-            "Earth's atmosphere is a complex system that protects all life. The atmosphere is 78% nitrogen and 21% oxygen, with small amounts of other gases. The ozone layer, a special part of the atmosphere, blocks harmful UV radiation from reaching the surface.",
-            
-            "Earth's surface is a dynamic landscape shaped by powerful forces. 70% is covered by oceans containing liquid water, a unique feature in our solar system. The remaining 30% consists of continents with mountains, forests, and deserts.",
-            
-            "Earth's core is an incredible powerhouse. Its temperature matches the Sun's surface at about 5,400°C. This molten core generates a magnetic field that protects us from harmful solar radiation and helps some animals navigate.",
-            
-            "Earth's daily and yearly cycles create our familiar patterns of life. It completes one rotation every 24 hours, giving us day and night. The planet's 23.5-degree tilt causes our seasons as we orbit the Sun.",
-            
-            "Earth's gravity, averaging 9.8 m/s², keeps everything grounded. This force holds our atmosphere in place, keeps the oceans in their basins, and helps maintain the Moon's orbit."
+            "Earth - Our Home Planet",
+            "Temperature: -88°C to 58°C",
+            "One moon",
+            "Only known planet with life",
+            "71% covered by water",
+            "24-hour day cycle"
         ]
     },
     "Mars": {
-        "color": (205, 92, 92),  # Indian red
+        "color": (205, 127, 50),  # Rusty red
         "radius": 14,
         "orbit": 250,
         "speed": 0.008,
-        "image": "Mars.png",
-        "stage2_image": "MarsStage2.png",
+        "image": "mars.png",  # Add your pixel art filenames here
         "info": [
-            "Mars is known as the Red Planet due to iron oxide (rust) on its surface. It has a thin atmosphere made mostly of carbon dioxide, and atmospheric pressure less than 1% of Earth's. The low pressure means liquid water can't exist on the surface for long.",
-            
-            "Mars has the largest volcano in the Solar System, Olympus Mons, and the longest canyon, Valles Marineris. These features formed when Mars was geologically active, billions of years ago.",
-            
-            "Evidence suggests Mars once had liquid water on its surface. Ancient river valleys, lake beds, and minerals that only form in water's presence indicate Mars might have been habitable in the past.",
-            
-            "Mars has two small, irregularly shaped moons: Phobos and Deimos. They're likely captured asteroids and orbit very close to the planet. Phobos is gradually moving closer to Mars and will eventually break apart or crash into the planet.",
-            
-            "The planet experiences dramatic dust storms that can cover the entire planet and last for weeks or months. These storms, combined with the planet's red color, make Mars appear even more reddish during these events."
+            "Mars - The Red Planet",
+            "Temperature: -140°C to 20°C",
+            "Two moons: Phobos and Deimos",
+            "Has the largest volcano in the solar system",
+            "Possible future human colony",
+            "Year length: 687 Earth days"
         ]
     },
     "Jupiter": {
-        "color": (244, 164, 96),  # Sandy brown
+        "color": (255, 198, 73),  # Sandy yellow
         "radius": 40,
         "orbit": 320,
         "speed": 0.005,
-        "image": "Jupiter.png",
-        "stage2_image": "JupiterStage2.png",
+        "image": "jupiter.png",  # Add your pixel art filenames here
         "info": [
-            "Jupiter is the largest planet in our Solar System, with a mass more than twice that of all other planets combined. It's a gas giant, primarily composed of hydrogen and helium, similar to the composition of the Sun.",
-            
-            "The Great Red Spot is Jupiter's most famous feature - a giant storm that has been raging for at least 400 years. This storm is so large that three Earths could fit inside it. The spot's color comes from unknown compounds that turn red when exposed to sunlight.",
-            
-            "Jupiter has the strongest magnetic field of any planet, about 14 times stronger than Earth's. This powerful field creates intense radiation belts around the planet and produces spectacular auroras at its poles.",
-            
-            "The planet has at least 79 known moons, including the four large Galilean moons: Io, Europa, Ganymede, and Callisto. Ganymede is the largest moon in the Solar System, bigger than the planet Mercury.",
-            
-            "Jupiter's atmosphere features multiple bands of clouds moving in alternating directions, creating zones and belts. These bands are driven by powerful winds that can reach speeds of up to 650 kilometers per hour."
+            "Jupiter - The Largest Planet",
+            "Temperature: -110°C (cloud top)",
+            "79 known moons",
+            "Great Red Spot is a giant storm",
+            "More than twice the mass of all other planets combined",
+            "Year length: 12 Earth years"
         ]
     },
     "Saturn": {
-        "color": (238, 232, 205),  # Pale goldenrod
+        "color": (238, 232, 205),  # Pale yellow
         "radius": 35,
         "orbit": 400,
         "speed": 0.003,
-        "image": "Saturn.png",
-        "stage2_image": "SaturnStage2.png",
+        "image": "saturn.png",  # Add your pixel art filenames here
         "info": [
-            "Saturn is famous for its spectacular ring system, the most extensive in the Solar System. The rings are made mostly of water ice, with some rocky debris and dust. Despite being up to 280,000 km wide, the rings are only about 10 meters thick.",
-            
-            "Like Jupiter, Saturn is a gas giant composed mainly of hydrogen and helium. It's the only planet less dense than water - if there were a bathtub big enough, Saturn would float! This low density is due to its gaseous composition.",
-            
-            "Saturn has at least 82 moons, including Titan, the only moon in the Solar System with a substantial atmosphere. Titan is larger than Mercury and has lakes and seas of liquid methane on its surface.",
-            
-            "The planet's hexagonal storm at its north pole is a unique feature in the Solar System. This six-sided jet stream has been observed since the Voyager missions in the 1980s and is about 25,000 km across.",
-            
-            "Saturn's magnetic field is weaker than Jupiter's but still 578 times stronger than Earth's. The field creates auroras at both poles and interacts with the planet's rings and moons in complex ways."
+            "Saturn - The Ringed Planet",
+            "Temperature: -178°C",
+            "82 confirmed moons",
+            "Famous for its beautiful rings",
+            "Could float in water (if there was a big enough pool)",
+            "Year length: 29.5 Earth years"
         ]
     },
     "Uranus": {
@@ -173,18 +131,14 @@ planets = {
         "radius": 25,
         "orbit": 470,
         "speed": 0.002,
-        "image": "Uranus.png",
-        "stage2_image": "UranusStage2.png",
+        "image": "uranus.png",  # Add your pixel art filenames here
         "info": [
-            "Uranus is unique among planets because it rotates on its side, with its axis tilted at 98 degrees. This unusual tilt means that its poles experience 42 years of continuous sunlight followed by 42 years of darkness.",
-            
-            "The planet is an ice giant, composed mainly of water, methane, and ammonia ices beneath its hydrogen-helium atmosphere. The methane in its atmosphere gives Uranus its blue-green color by absorbing red light.",
-            
-            "Uranus has 27 known moons, all named after characters from the works of William Shakespeare and Alexander Pope. The five largest are Miranda, Ariel, Umbriel, Titania, and Oberon.",
-            
-            "The planet's atmosphere contains layers of clouds at different heights. The innermost clouds are made of water, while the outer layers contain methane ice. Wind speeds can reach up to 900 kilometers per hour.",
-            
-            "Uranus has a complex ring system, though much fainter than Saturn's. These rings were the first to be discovered after Saturn's, found in 1977 when the planet passed in front of a star and briefly blocked its light."
+            "Uranus - The Sideways Planet",
+            "Temperature: -224°C",
+            "27 known moons",
+            "Rotates on its side",
+            "First planet discovered by telescope",
+            "Year length: 84 Earth years"
         ]
     },
     "Neptune": {
@@ -192,18 +146,14 @@ planets = {
         "radius": 24,
         "orbit": 520,
         "speed": 0.001,
-        "image": "Neptune.png",
-        "stage2_image": "NeptuneStage2.png",
+        "image": "neptune.png",  # Add your pixel art filenames here
         "info": [
-            "Neptune is the windiest planet in the Solar System, with speeds reaching up to 2,100 kilometers per hour. These winds drive huge storms, including the Great Dark Spot, similar to Jupiter's Great Red Spot but more transient.",
-            
-            "Like Uranus, Neptune is an ice giant composed primarily of water, ammonia, and methane ices. Its blue color comes from methane in its atmosphere absorbing red light, but Neptune's blue is notably deeper than Uranus's blue-green.",
-            
-            "The planet has 14 known moons, with Triton being the largest. Triton orbits Neptune backwards (retrograde orbit), suggesting it's a captured Kuiper Belt object. It has active geysers that spew nitrogen ice and dust into space.",
-            
-            "Neptune's magnetic field is tilted 47 degrees from its rotational axis and offset from the planet's center. This unusual configuration creates complex magnetic interactions with the solar wind.",
-            
-            "The planet has a system of rings, though they're dark and difficult to see. These rings contain unusually high percentages of dust compared to ice, making them quite different from Saturn's bright, icy rings."
+            "Neptune - The Windy Planet",
+            "Temperature: -214°C",
+            "14 known moons",
+            "Strongest winds in the solar system",
+            "The most distant planet",
+            "Year length: 165 Earth years"
         ]
     }
 }
@@ -370,43 +320,18 @@ class Bullet:
         self.speed = BULLET_SPEED
         self.lifetime = BULLET_LIFETIME
         self.size = 3
-        self.bounces = 0  # Track number of bounces
-        self.max_bounces = 3  # Maximum number of bounces before disappearing
 
     def update(self):
-        # Update position
         self.x += math.cos(math.radians(self.angle)) * self.speed
         self.y += math.sin(math.radians(self.angle)) * self.speed
         self.lifetime -= 1
         
-        # Check for wall collisions and bounce
-        if self.x <= 0 or self.x >= WIDTH:
-            self.angle = 180 - self.angle  # Reverse horizontal direction
-            self.bounces += 1
-            # Add slight random angle variation on bounce
-            self.angle += random() * 10 - 5
-        
-        if self.y <= 0 or self.y >= HEIGHT:
-            self.angle = -self.angle  # Reverse vertical direction
-            self.bounces += 1
-            # Add slight random angle variation on bounce
-            self.angle += random() * 10 - 5
-        
-        # Keep angle in range 0-360
-        self.angle = self.angle % 360
-        
-        # Reduce speed slightly with each bounce
-        if self.bounces > 0:
-            self.speed = max(BULLET_SPEED * (0.8 ** self.bounces), 3)
+        # Screen wrapping
+        self.x = self.x % WIDTH
+        self.y = self.y % HEIGHT
 
     def draw(self, screen):
-        # Draw bullet with color based on bounce count
-        color = (
-            min(255, 255 - self.bounces * 30),  # Reduce red
-            min(255, 255 - self.bounces * 30),  # Reduce yellow
-            min(255, self.bounces * 50)         # Add blue
-        )
-        pygame.draw.circle(screen, color, (int(self.x), int(self.y)), self.size)
+        pygame.draw.circle(screen, (255, 255, 0), (int(self.x), int(self.y)), self.size)
 
 class Asteroid:
     def __init__(self):
@@ -459,65 +384,10 @@ class Asteroid:
     def check_collision(self, x, y, size):
         return math.sqrt((self.x - x)**2 + (self.y - y)**2) < self.size + size
 
-class Comet:
-    def __init__(self):
-        # Determine spawn position (from edges only)
-        if random() < 0.5:
-            self.x = 0 if random() < 0.5 else WIDTH
-            self.y = randint(0, HEIGHT)
-        else:
-            self.x = randint(0, WIDTH)
-            self.y = 0 if random() < 0.5 else HEIGHT
-        
-        # Increased speed range (was 1-3, now 3-6)
-        self.speed = random() * 3 + 3  # Speed between 3 and 6
-        
-        # Calculate target point avoiding middle area
-        center_x = WIDTH // 2
-        center_y = HEIGHT // 2
-        avoid_radius = 200  # Radius of area to avoid around center
-        
-        while True:
-            target_x = randint(0, WIDTH)
-            target_y = randint(0, HEIGHT)
-            # Check if target is too close to center
-            dist_to_center = math.sqrt((target_x - center_x)**2 + (target_y - center_y)**2)
-            if dist_to_center > avoid_radius:
-                break
-        
-        # Calculate angle towards target
-        self.angle = math.degrees(math.atan2(target_y - self.y, target_x - self.x))
-        
-        # Trail properties
-        self.trail = []
-        self.trail_length = 20
-        self.size = random() * 2 + 1  # Comet size between 1 and 3
-
-    def update(self):
-        # Update position
-        self.x += math.cos(math.radians(self.angle)) * self.speed
-        self.y += math.sin(math.radians(self.angle)) * self.speed
-        
-        # Update trail
-        self.trail.append((self.x, self.y))
-        if len(self.trail) > self.trail_length:
-            self.trail.pop(0)
-
-    def draw(self, screen):
-        # Draw trail with fade effect
-        if len(self.trail) > 2:
-            for i in range(len(self.trail) - 1):
-                alpha = int(255 * (i / len(self.trail)))
-                pygame.draw.line(screen, (255, 255, 255, alpha),
-                               self.trail[i], self.trail[i + 1], 2)
-        
-        # Draw comet head
-        pygame.draw.circle(screen, WHITE, (int(self.x), int(self.y)), int(self.size))
-
 class Rocket:
     def __init__(self):
         self.x = WIDTH // 2
-        self.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
+        self.y = HEIGHT // 2
         self.angle = 0
         self.speed = 0
         self.acceleration = 0.1
@@ -572,7 +442,7 @@ class Rocket:
         # Update bullets
         for bullet in self.bullets[:]:
             bullet.update()
-            if bullet.lifetime <= 0 or bullet.bounces >= bullet.max_bounces:
+            if bullet.lifetime <= 0:
                 self.bullets.remove(bullet)
 
         # Forward thrust with both UP and W
@@ -1010,38 +880,6 @@ class QuizScreen:
                     "answers": ["Methane gas", "Water ice", "Nitrogen", "Hydrogen"],
                     "correct": 0
                 }
-            ],
-            "Sun": [
-                {
-                    "question": "What type of star is the Sun?",
-                    "answers": ["Yellow Dwarf", "Red Giant", "White Dwarf", "Neutron Star"],
-                    "correct": 0
-                },
-                {
-                    "question": "How long does it take sunlight to reach Earth?",
-                    "answers": ["8 minutes", "2 minutes", "30 minutes", "1 second"],
-                    "correct": 0
-                },
-                {
-                    "question": "What is the Sun's core temperature?",
-                    "answers": ["15 million °C", "5,500 °C", "1 million °C", "100,000 °C"],
-                    "correct": 0
-                },
-                {
-                    "question": "What process powers the Sun?",
-                    "answers": ["Nuclear Fusion", "Nuclear Fission", "Chemical Burning", "Solar Wind"],
-                    "correct": 0
-                },
-                {
-                    "question": "What is the Sun's outermost layer called?",
-                    "answers": ["Corona", "Photosphere", "Chromosphere", "Core"],
-                    "correct": 0
-                },
-                {
-                    "question": "What percentage of the solar system's mass is in the Sun?",
-                    "answers": ["99.86%", "75%", "85%", "95%"],
-                    "correct": 0
-                }
             ]
         }
         self.used_questions = []
@@ -1157,13 +995,13 @@ class QuizScreen:
 
     def reset_rocket(self, rocket):
         rocket.x = WIDTH // 2  # Center horizontally
-        rocket.y = HEIGHT * 3 // 4  # Changed from HEIGHT // 2 to HEIGHT * 3 // 4
+        rocket.y = HEIGHT // 2  # Center vertically
         rocket.speed = 0
         self.rocket_reset_position = False
 
 class SpaceExplorer:
     def __init__(self):
-        self.planets = [Planet(name, data) for name, data in planets.items() if name != "Sun"]
+        self.planets = [Planet(name, data) for name, data in planets.items()]
         self.stars = [Star() for _ in range(200)]
         self.rocket = Rocket()
         self.asteroids = []
@@ -1183,102 +1021,28 @@ class SpaceExplorer:
             'quiz': {'rect': pygame.Rect(WIDTH - 120, 20, 100, 40), 'color': (200, 100, 100)},
             'back': {'rect': pygame.Rect(WIDTH//2 - 100, HEIGHT - 60, 200, 40), 'color': (100, 100, 200)}
         }
-        
-        # Add sun image loading
-        try:
-            self.sun_image = pygame.image.load(os.path.join(ASSETS_DIR, "sun.png")).convert_alpha()
-            # Scale the sun image (reduced size from 150 to 100)
-            self.sun_image = pygame.transform.scale(self.sun_image, (100, 100))
-            self.use_sun_image = True
-            self.sun_rotation = 0
-            self.sun_rotation_speed = 0.1
-        except pygame.error as e:
-            print(f"Could not load sun image: {e}")
-            self.use_sun_image = False
-        
-        # Add menu state and font
-        self.in_menu = True
-        self.menu_font = pygame.font.Font(None, 74)
-        self.menu_alpha = 0
-        self.alpha_direction = 1
-        
-        # Replace launch button with galaxy particles
-        self.launch_button = {
-            'rect': pygame.Rect(WIDTH//2 - 150, HEIGHT//2 + 50, 300, 80),
-            'color': (100, 100, 200),
-            'hover': False
-        }
-        self.comets = []
-        self.comet_spawn_timer = 0
-        
-        # Add development button with increased width
-        self.dev_button = {
-            'rect': pygame.Rect(WIDTH//2 - 200, HEIGHT//2 + 150, 400, 80),  # Increased width from 300 to 400
-            'color': (100, 200, 100),
-            'hover': False
-        }
-        
-        # Add development mode properties
-        self.in_dev_mode = False
-        self.history_images = []
-        self.current_image_index = 0
-        
-        # Load history images
-        history_dir = "history"
-        if os.path.exists(history_dir):
-            for file in os.listdir(history_dir):
-                if file.endswith(".jpg"):
-                    try:
-                        img_path = os.path.join(history_dir, file)
-                        img = pygame.image.load(img_path)
-                        # Scale image to fit screen while maintaining aspect ratio
-                        img_ratio = img.get_width() / img.get_height()
-                        if img_ratio > WIDTH / HEIGHT:
-                            new_width = WIDTH
-                            new_height = int(WIDTH / img_ratio)
-                        else:
-                            new_height = HEIGHT
-                            new_width = int(HEIGHT * img_ratio)
-                        img = pygame.transform.scale(img, (new_width, new_height))
-                        self.history_images.append(img)
-                    except pygame.error as e:
-                        print(f"Could not load image {file}: {e}")
-        self.earth_platformer = None
-        self.planet_platformer = None
 
     def reset_rocket_position(self):
         if not self.planet_view:
-            # Position rocket in the upper middle of the solar system screen
             self.rocket.x = WIDTH // 2
-            self.rocket.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
+            self.rocket.y = HEIGHT // 2
         else:
             if self.current_quiz_screen:
-                # Position rocket in the upper middle for quiz
+                # Position rocket in the middle for quiz
                 self.rocket.x = WIDTH // 2
-                self.rocket.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
+                self.rocket.y = HEIGHT // 2
             else:
                 # Position rocket on the planet screen
                 self.rocket.x = WIDTH // 2
-                self.rocket.y = HEIGHT // 4  # Changed from HEIGHT - 100 to HEIGHT // 4
+                self.rocket.y = HEIGHT - 100
         self.rocket.speed = 0
         self.cooldown = 30
 
     def check_collisions(self):
         if not self.planet_view:
-            # First check collision with Sun (changed radius from 60 to 40)
-            distance_to_sun = math.sqrt(
-                (self.rocket.x - WIDTH//2)**2 + 
-                (self.rocket.y - HEIGHT//2)**2
-            )
-            if distance_to_sun < 40 + self.rocket.size:  # Changed from 60 to 40
-                return Planet("Sun", planets["Sun"])
-            
-            # Then check other planets
             for planet in self.planets:
-                distance = math.sqrt(
-                    (self.rocket.x - planet.x)**2 + 
-                    (self.rocket.y - planet.y)**2
-                )
+                distance = math.sqrt((self.rocket.x - planet.x)**2 + 
+                                   (self.rocket.y - planet.y)**2)
                 if distance < planet.radius + self.rocket.size:
                     return planet
         return None
@@ -1346,43 +1110,6 @@ class SpaceExplorer:
         text_rect = text_surface.get_rect(center=rect.center)
         screen.blit(text_surface, text_rect)
 
-    def update_space_objects(self):
-        # Update comets
-        self.comet_spawn_timer -= 1
-        if self.comet_spawn_timer <= 0 and len(self.comets) < 3:
-            if random() < 0.05:
-                self.comets.append(Comet())
-                self.comet_spawn_timer = randint(120, 240)
-        
-        # Update existing comets
-        for comet in self.comets[:]:
-            comet.update()
-            if (comet.x < -50 or comet.x > WIDTH + 50 or 
-                comet.y < -50 or comet.y > HEIGHT + 50):
-                self.comets.remove(comet)
-        
-        # Update asteroids
-        if len(self.asteroids) < MAX_ASTEROIDS and random() < ASTEROID_SPAWN_RATE:
-            self.asteroids.append(Asteroid())
-
-        for asteroid in self.asteroids[:]:
-            asteroid.update()
-            
-            # Check collision with bullets
-            for bullet in self.rocket.bullets[:]:
-                if asteroid.check_collision(bullet.x, bullet.y, bullet.size):
-                    if asteroid in self.asteroids:
-                        self.asteroids.remove(asteroid)
-                    if bullet in self.rocket.bullets:
-                        self.rocket.bullets.remove(bullet)
-                    break
-            
-            # Remove asteroids that are far off screen
-            if (asteroid.x < -100 or asteroid.x > WIDTH + 100 or 
-                asteroid.y < -100 or asteroid.y > HEIGHT + 100):
-                if asteroid in self.asteroids:
-                    self.asteroids.remove(asteroid)
-
     def draw_planet_screen(self, screen):
         # Draw a space background
         screen.fill(BLACK)
@@ -1395,215 +1122,108 @@ class SpaceExplorer:
             star_color = tuple(int(c * brightness) for c in color)
             pygame.draw.circle(screen, star_color, (int(star_x), int(star_y)), size)
 
-        # Load and draw the Stage 2 planet image
-        try:
-            image_path = os.path.join(ASSETS_DIR, "stage2", planets[self.current_planet.name]["stage2_image"])
-            planet_image = pygame.image.load(image_path).convert_alpha()
+        # Calculate planet size
+        planet_radius = self.current_planet.radius * 8
+        center_x = WIDTH // 2
+        center_y = HEIGHT // 2
+
+        if self.current_planet.name == "Saturn":
+            # Draw rings behind the planet first
+            ring_width = planet_radius * 1.2
+            ring_height = planet_radius * 0.1
             
-            # Scale image to fit screen while maintaining aspect ratio
-            scale = min(WIDTH * 0.8 / planet_image.get_width(), 
-                       HEIGHT * 0.8 / planet_image.get_height())
-            new_width = int(planet_image.get_width() * scale)
-            new_height = int(planet_image.get_height() * scale)
-            planet_image = pygame.transform.scale(planet_image, (new_width, new_height))
+            # Calculate ring tilt based on time for slow rotation
+            ring_tilt = math.sin(time.time() * 0.2) * 0.3 + 0.7  # Varies between 0.4 and 1.0
             
-            # Center the image on screen
-            x = WIDTH // 2 - new_width // 2
-            y = HEIGHT // 2 - new_height // 2
-            screen.blit(planet_image, (x, y))
-        except (pygame.error, FileNotFoundError) as e:
-            print(f"Could not load Stage 2 image for {self.current_planet.name}: {e}")
-            # Fallback to original drawing method if image loading fails
-            # ... existing planet drawing code ...
+            # Draw the back half of the rings
+            num_rings = 8
+            for r in range(num_rings):
+                # Calculate ring parameters
+                ring_offset = r * (ring_width * 0.1)
+                current_width = ring_width - ring_offset
+                current_height = ring_height * ring_tilt
+                
+                # Darker color for back rings
+                ring_color = (*self.current_planet.color, 40 - r * 4)
+                
+                # Draw back ellipse
+                pygame.draw.ellipse(screen, ring_color,
+                                  (center_x - current_width,
+                                   center_y - current_height + r,
+                                   current_width * 2,
+                                   current_height * 2), 1)
+
+        # Draw planet glow/atmosphere with smoother gradient
+        for radius in range(planet_radius + 20, planet_radius - 2, -1):
+            alpha = int(20 * (radius - planet_radius + 2) / 22)
+            glow_color = (*self.current_planet.color, alpha)
+            pygame.draw.circle(screen, glow_color, (center_x, center_y), radius)
+
+        # Draw main planet body
+        pygame.draw.circle(screen, self.current_planet.color, (center_x, center_y), planet_radius)
+
+        # Draw persistent surface details
+        for x, y, radius, shade in self.surface_details:
+            color = tuple(max(0, min(255, c + shade)) for c in self.current_planet.color)
+            pygame.draw.circle(screen, color, 
+                             (int(center_x + x), int(center_y + y)), radius)
+
+        # Special details for specific planets
+        if self.current_planet.name == "Saturn":
+            # Draw the front half of the rings with brighter colors
+            for r in range(num_rings):
+                # Calculate ring parameters
+                ring_offset = r * (ring_width * 0.1)
+                current_width = ring_width - ring_offset
+                current_height = ring_height * ring_tilt
+                
+                # Brighter color for front rings
+                ring_color = (*self.current_planet.color, 150 - r * 15)
+                
+                # Draw front ellipse
+                pygame.draw.ellipse(screen, ring_color,
+                                  (center_x - current_width,
+                                   center_y + r,
+                                   current_width * 2,
+                                   current_height * 2), 1)
+                
+                # Add ring detail lines for texture
+                if r % 2 == 0:
+                    detail_color = (*self.current_planet.color, 100 - r * 10)
+                    pygame.draw.ellipse(screen, detail_color,
+                                      (center_x - current_width + 10,
+                                       center_y + r + 2,
+                                       (current_width - 10) * 2,
+                                       (current_height - 2) * 2), 1)
+
+            # Add shadow of planet on rings
+            shadow_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            shadow_width = planet_radius * 0.8
+            shadow_points = [
+                (center_x - shadow_width, center_y),
+                (center_x + shadow_width, center_y),
+                (center_x + planet_radius * 1.5, center_y + planet_radius),
+                (center_x - planet_radius * 1.5, center_y + planet_radius)
+            ]
+            pygame.draw.polygon(shadow_surface, (0, 0, 0, 100), shadow_points)
+            screen.blit(shadow_surface, (0, 0))
+
+        elif self.current_planet.name == "Jupiter":
+            # Draw Jupiter's bands with smoother gradients
+            for i in range(-planet_radius, planet_radius, 8):
+                base_color = self.current_planet.color
+                stripe_color = tuple(min(255, c + 20 + int(10 * math.sin(i * 0.1))) 
+                                   for c in base_color)
+                y = center_y + i
+                x_offset = math.sqrt(max(0, planet_radius**2 - i**2))
+                pygame.draw.line(screen, stripe_color,
+                               (center_x - x_offset, y),
+                               (center_x + x_offset, y), 3)
 
         # Draw interactive options
         self.draw_option_button(screen, self.options['facts']['rect'], "FACTS", self.options['facts']['color'])
         self.draw_option_button(screen, self.options['quiz']['rect'], "QUIZ", self.options['quiz']['color'])
         self.draw_option_button(screen, self.options['back']['rect'], "BACK", self.options['back']['color'])
-
-    def draw_sun(self):
-        if self.use_sun_image:
-            # Update rotation
-            self.sun_rotation = (self.sun_rotation + self.sun_rotation_speed) % 360
-            
-            # Create pulsing effect for the image
-            pulse = abs(math.sin(time.time())) * 10
-            pulse_size = int(100 + pulse)  # Base size 100px + pulse
-            
-            # Draw sun glow/corona
-            corona_surfaces = []
-            for i in range(5):
-                corona_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
-                radius = 80 + i * 10
-                alpha = int(100 * (1 - i/5))
-                pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (100, 100), radius)
-                corona_surfaces.append(corona_surf)
-            
-            # Draw corona layers
-            for surf in corona_surfaces:
-                screen.blit(surf, (WIDTH//2 - 100, HEIGHT//2 - 100))
-            
-            # Scale and rotate the sun image
-            scaled_sun = pygame.transform.scale(
-                self.sun_image, 
-                (pulse_size, pulse_size)
-            )
-            rotated_sun = pygame.transform.rotate(scaled_sun, self.sun_rotation)
-            
-            # Center the sun image
-            sun_rect = rotated_sun.get_rect(
-                center=(WIDTH // 2, HEIGHT // 2)
-            )
-            
-            # Draw the sun image
-            screen.blit(rotated_sun, sun_rect)
-            
-        else:
-            # Fallback to original sun drawing code
-            corona_surfaces = []
-            for i in range(5):
-                corona_surf = pygame.Surface((100, 100), pygame.SRCALPHA)
-                radius = 60 + i * 10
-                alpha = int(100 * (1 - i/5))
-                pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (50, 50), radius)
-                corona_surfaces.append(corona_surf)
-            
-            pulse = abs(math.sin(time.time())) * 10
-            
-            for surf in corona_surfaces:
-                screen.blit(surf, (WIDTH//2 - 50, HEIGHT//2 - 50))
-            
-            pygame.draw.circle(screen, YELLOW, (WIDTH//2, HEIGHT//2), 50 + pulse)
-            
-            for i in range(8):
-                angle = time.time() + i * math.pi/4
-                x = WIDTH//2 + math.cos(angle) * 45
-                y = HEIGHT//2 + math.sin(angle) * 45
-                pygame.draw.circle(screen, (255, 200, 50), (int(x), int(y)), 10)
-
-    def draw_menu(self, screen):
-        # Draw background
-        screen.fill(BLACK)
-        
-        # Draw animated stars
-        for star in self.stars:
-            star.update()
-            star.draw(screen)
-        
-        # Draw title text with glow effect
-        title_text = self.menu_font.render("SPACE EXPLORER", True, WHITE)
-        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
-        
-        # Draw title glow
-        glow_surf = pygame.Surface((title_text.get_width() + 20, title_text.get_height() + 20), pygame.SRCALPHA)
-        glow_color = (255, 255, 255, self.menu_alpha)
-        glow_text = self.menu_font.render("SPACE EXPLORER", True, glow_color)
-        glow_rect = glow_text.get_rect(center=(glow_surf.get_width() // 2, glow_surf.get_height() // 2))
-        glow_surf.blit(glow_text, glow_rect)
-        screen.blit(glow_surf, (title_rect.x - 10, title_rect.y - 10))
-        screen.blit(title_text, title_rect)
-        
-        # Update button hover state
-        mouse_pos = pygame.mouse.get_pos()
-        self.launch_button['hover'] = self.launch_button['rect'].collidepoint(mouse_pos)
-        self.dev_button['hover'] = self.dev_button['rect'].collidepoint(mouse_pos)
-        
-        # Draw launch button with glow effect
-        button_color = (150, 150, 255) if self.launch_button['hover'] else self.launch_button['color']
-        
-        # Draw button glow
-        glow_rect = self.launch_button['rect'].inflate(16, 16)
-        for i in range(3):
-            glow_alpha = 100 - i * 30
-            glow_surface = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
-            pygame.draw.rect(glow_surface, (*button_color, glow_alpha), 
-                           glow_surface.get_rect(), border_radius=10)
-            screen.blit(glow_surface, glow_rect.topleft)
-        
-        # Draw main button
-        button_surface = pygame.Surface((self.launch_button['rect'].width, self.launch_button['rect'].height), pygame.SRCALPHA)
-        pygame.draw.rect(button_surface, (*button_color, 200), 
-                        button_surface.get_rect(), border_radius=8)
-        screen.blit(button_surface, self.launch_button['rect'].topleft)
-        
-        # Draw button text
-        launch_text = self.menu_font.render("LAUNCH", True, WHITE)
-        text_rect = launch_text.get_rect(center=self.launch_button['rect'].center)
-        screen.blit(launch_text, text_rect)
-        
-        # Draw development button
-        dev_color = (150, 255, 150) if self.dev_button['hover'] else self.dev_button['color']
-        
-        # Draw button glow
-        glow_rect = self.dev_button['rect'].inflate(16, 16)
-        for i in range(3):
-            glow_alpha = 100 - i * 30
-            glow_surface = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
-            pygame.draw.rect(glow_surface, (*dev_color, glow_alpha), 
-                           glow_surface.get_rect(), border_radius=10)
-            screen.blit(glow_surface, glow_rect.topleft)
-        
-        # Draw main button
-        button_surface = pygame.Surface((self.dev_button['rect'].width, self.dev_button['rect'].height), pygame.SRCALPHA)
-        pygame.draw.rect(button_surface, (*dev_color, 200), 
-                        button_surface.get_rect(), border_radius=8)
-        screen.blit(button_surface, self.dev_button['rect'].topleft)
-        
-        # Draw button text
-        dev_text = self.menu_font.render("DEVELOPMENT", True, WHITE)
-        text_rect = dev_text.get_rect(center=self.dev_button['rect'].center)
-        screen.blit(dev_text, text_rect)
-
-    def draw_dev_mode(self, screen):
-        if not self.history_images:
-            screen.fill(BLACK)
-            text = self.large_font.render("No history images found", True, WHITE)
-            screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2))
-            return
-
-        # Draw current image
-        current_img = self.history_images[self.current_image_index]
-        # Center the image
-        x = (WIDTH - current_img.get_width()) // 2
-        y = (HEIGHT - current_img.get_height()) // 2
-        screen.blit(current_img, (x, y))
-
-        # Update and draw space objects
-        self.update_space_objects()  # Update asteroids and comets
-        
-        # Draw comets and asteroids
-        for comet in self.comets:
-            comet.draw(screen)
-        for asteroid in self.asteroids:
-            asteroid.draw(screen)
-
-        # Draw rocket
-        self.rocket.draw(screen)
-
-        # Draw escape text in corner with glow effect
-        escape_text = "press escape to go back to menu"
-        text_surface = self.font.render(escape_text, True, WHITE)
-        text_rect = text_surface.get_rect()
-        text_rect.bottomright = (WIDTH - 20, HEIGHT - 20)  # Position in bottom-right corner
-
-        # Add glow effect
-        glow_surface = pygame.Surface((text_rect.width + 4, text_rect.height + 4), pygame.SRCALPHA)
-        for offset in range(3):
-            glow_alpha = 100 - offset * 30
-            glow_text = self.font.render(escape_text, True, (255, 255, 255, glow_alpha))
-            glow_rect = glow_text.get_rect(center=(glow_surface.get_width()//2, glow_surface.get_height()//2))
-            glow_surface.blit(glow_text, glow_rect)
-        
-        screen.blit(glow_surface, (text_rect.x - 2, text_rect.y - 2))
-        screen.blit(text_surface, text_rect)
-
-        # Check if rocket moves to next/previous image
-        if self.rocket.x > WIDTH - 50:  # Move to next image
-            self.current_image_index = (self.current_image_index + 1) % len(self.history_images)
-            self.rocket.x = 51
-        elif self.rocket.x < 50:  # Move to previous image
-            self.current_image_index = (self.current_image_index - 1) % len(self.history_images)
-            self.rocket.x = WIDTH - 51
 
     def run(self):
         clock = pygame.time.Clock()
@@ -1613,66 +1233,29 @@ class SpaceExplorer:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left click
-                        if self.in_menu:
-                            mouse_pos = pygame.mouse.get_pos()
-                            if self.launch_button['rect'].collidepoint(mouse_pos):
-                                self.in_menu = False
-                            elif self.dev_button['rect'].collidepoint(mouse_pos):
-                                self.in_menu = False
-                                self.in_dev_mode = True
-                                self.rocket.x = WIDTH // 2
-                                self.rocket.y = HEIGHT // 2
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        if self.in_dev_mode:
-                            self.in_dev_mode = False
-                            self.in_menu = True
-                        elif self.current_info_screen:
+                    if event.key == pygame.K_ESCAPE and self.current_info_screen:
+                        self.current_info_screen = None
+                    elif event.key == pygame.K_ESCAPE:
+                        if self.current_info_screen:
                             self.current_info_screen = None
+                            self.reset_rocket_position()
                         elif self.planet_view:
                             self.exit_planet_view()
-                        elif not self.in_menu:  # If in solar system view
-                            self.in_menu = True
-                            self.reset_rocket_position()
 
-            # Update space objects for all game states except menu
-            if not self.in_menu:
-                self.update_space_objects()
-
-            # Update button hover states in menu
-            if self.in_menu:
-                mouse_pos = pygame.mouse.get_pos()
-                self.launch_button['hover'] = self.launch_button['rect'].collidepoint(mouse_pos)
-                self.dev_button['hover'] = self.dev_button['rect'].collidepoint(mouse_pos)
-                self.draw_menu(screen)
-            elif self.in_dev_mode:
-                keys = pygame.key.get_pressed()
-                self.rocket.update(keys)
-                self.draw_dev_mode(screen)
-            elif self.current_info_screen:
+            if self.current_info_screen:
                 self.current_info_screen.draw(screen)
-                # Draw space objects in info screen
-                for comet in self.comets:
-                    comet.draw(screen)
-                for asteroid in self.asteroids:
-                    asteroid.draw(screen)
             elif self.current_quiz_screen:
                 self.current_quiz_screen.draw(screen, self.rocket)
                 
-                if self.current_quiz_screen.rocket_reset_position:
+                # Reset rocket position if needed
+                if hasattr(self.current_quiz_screen, 'rocket_reset_position') and self.current_quiz_screen.rocket_reset_position:
                     self.current_quiz_screen.reset_rocket(self.rocket)
                 
                 keys = pygame.key.get_pressed()
                 self.rocket.update(keys)
                 
-                # Draw space objects
-                for comet in self.comets:
-                    comet.draw(screen)
-                for asteroid in self.asteroids:
-                    asteroid.draw(screen)
-                
+                # Check for quiz answer collisions
                 rocket_rect = pygame.Rect(self.rocket.x - self.rocket.size, 
                                         self.rocket.y - self.rocket.size,
                                         self.rocket.size * 2, 
@@ -1683,18 +1266,6 @@ class SpaceExplorer:
                     self.reset_rocket_position()
                 
                 self.rocket.draw(screen)
-            elif self.earth_platformer:
-                # Run the Earth platformer game
-                continue_space = self.earth_platformer.run()
-                if continue_space:
-                    self.earth_platformer = None
-                    self.exit_planet_view()
-            elif self.planet_platformer:
-                # Run the planet platformer game
-                continue_space = self.planet_platformer.run()
-                if continue_space:
-                    self.planet_platformer = None
-                    self.exit_planet_view()
             else:
                 keys = pygame.key.get_pressed()
                 self.rocket.update(keys)
@@ -1703,22 +1274,44 @@ class SpaceExplorer:
                     self.cooldown -= 1
                 else:
                     if not self.planet_view:
+                        # Update asteroids
+                        if len(self.asteroids) < MAX_ASTEROIDS and random() < ASTEROID_SPAWN_RATE:
+                            self.asteroids.append(Asteroid())
+
+                        for asteroid in self.asteroids[:]:
+                            asteroid.update()
+                            
+                            # Check collision with bullets
+                            for bullet in self.rocket.bullets[:]:
+                                if asteroid.check_collision(bullet.x, bullet.y, bullet.size):
+                                    if asteroid in self.asteroids:
+                                        self.asteroids.remove(asteroid)
+                                    if bullet in self.rocket.bullets:
+                                        self.rocket.bullets.remove(bullet)
+                                    break
+                            
+                            # Check collision with rocket
+                            if asteroid.check_collision(self.rocket.x, self.rocket.y, self.rocket.size):
+                                self.reset_rocket_position()
+                                if asteroid in self.asteroids:
+                                    self.asteroids.remove(asteroid)
+
+                            # Remove asteroids that are far off screen
+                            if (asteroid.x < -100 or asteroid.x > WIDTH + 100 or 
+                                asteroid.y < -100 or asteroid.y > HEIGHT + 100):
+                                if asteroid in self.asteroids:
+                                    self.asteroids.remove(asteroid)
+
                         collided_planet = self.check_collisions()
                         if collided_planet:
                             self.enter_planet_view(collided_planet)
                     else:
                         option_hit = self.check_option_collisions()
                         if option_hit == 'facts':
-                            if self.current_planet.name == "Earth":
-                                self.earth_platformer = EarthPlatformer()
-                            else:
-                                # Create planet-specific platformer
-                                self.planet_platformer = PlanetPlatformer(
-                                    self.current_planet.name,
-                                    self.current_planet.color,
-                                    planets[self.current_planet.name]["info"],
-                                    (0, 0, 0)  # Black background
-                                )
+                            self.current_info_screen = InfoScreen(
+                                self.current_planet.name,
+                                planets[self.current_planet.name]["info"]
+                            )
                             self.reset_rocket_position()
                         elif option_hit == 'quiz':
                             self.current_quiz_screen = QuizScreen(self.current_planet.name)
@@ -1727,7 +1320,7 @@ class SpaceExplorer:
                             self.exit_planet_view()
 
                 screen.fill(BLACK)
-                
+
                 if not self.planet_view:
                     for star in self.stars:
                         star.update()
@@ -1736,28 +1329,9 @@ class SpaceExplorer:
                     for planet in self.planets:
                         planet.update()
                         planet.draw(screen)
-                    # Draw comets and asteroids after planets
-                    for comet in self.comets:
-                        comet.draw(screen)
+                    # Draw asteroids
                     for asteroid in self.asteroids:
                         asteroid.draw(screen)
-                
-                    # Add escape text in corner with glow effect
-                    escape_text = "press escape to go back to menu"
-                    text_surface = self.font.render(escape_text, True, WHITE)
-                    text_rect = text_surface.get_rect()
-                    text_rect.bottomright = (WIDTH - 20, HEIGHT - 20)
-
-                    # Add glow effect
-                    glow_surface = pygame.Surface((text_rect.width + 4, text_rect.height + 4), pygame.SRCALPHA)
-                    for offset in range(3):
-                        glow_alpha = 100 - offset * 30
-                        glow_text = self.font.render(escape_text, True, (255, 255, 255, glow_alpha))
-                        glow_rect = glow_text.get_rect(center=(glow_surface.get_width()//2, glow_surface.get_height()//2))
-                        glow_surface.blit(glow_text, glow_rect)
-                    
-                    screen.blit(glow_surface, (text_rect.x - 2, text_rect.y - 2))
-                    screen.blit(text_surface, text_rect)
                 else:
                     self.draw_planet_screen(screen)
 
@@ -1776,6 +1350,33 @@ class SpaceExplorer:
 
             pygame.display.flip()
             clock.tick(60)
+
+    def draw_sun(self):
+        # Draw sun corona
+        corona_surfaces = []
+        for i in range(5):
+            corona_surf = pygame.Surface((150, 150), pygame.SRCALPHA)
+            radius = 60 + i * 10
+            alpha = int(100 * (1 - i/5))
+            pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (75, 75), radius)
+            corona_surfaces.append(corona_surf)
+        
+        # Create pulsing effect
+        pulse = abs(math.sin(time.time())) * 10
+        
+        # Draw corona layers
+        for surf in corona_surfaces:
+            screen.blit(surf, (WIDTH//2 - 75, HEIGHT//2 - 75))
+        
+        # Draw sun core
+        pygame.draw.circle(screen, YELLOW, (WIDTH//2, HEIGHT//2), 50 + pulse)
+        
+        # Draw sun surface details
+        for i in range(8):
+            angle = time.time() + i * math.pi/4
+            x = WIDTH//2 + math.cos(angle) * 45
+            y = HEIGHT//2 + math.sin(angle) * 45
+            pygame.draw.circle(screen, (255, 200, 50), (int(x), int(y)), 10)
 
 if __name__ == "__main__":
     explorer = SpaceExplorer()
