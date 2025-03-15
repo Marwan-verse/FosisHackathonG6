@@ -4,6 +4,8 @@ import sys
 from random import randint, choice, random
 import time
 import os
+from earth_platformer import EarthPlatformer
+from planet_platformer import PlanetPlatformer, Player
 
 # Initialize Pygame
 pygame.init()
@@ -52,93 +54,111 @@ planets = {
         ]
     },
     "Mercury": {
-        "color": (169, 169, 169),  # Grey
+        "color": (169, 169, 169),  # Gray
         "radius": 10,
         "orbit": 100,
         "speed": 0.02,
         "image": "Murcury.png",  # Changed from "mercury.png" to "Murcury.png"
         "info": [
-            "Mercury - The Smallest Planet",
-            "Temperature: -180°C to 430°C",
-            "No moons",
-            "Closest planet to the Sun",
-            "Year length: 88 Earth days",
-            "No atmosphere"
+            "Mercury is the smallest and innermost planet in our Solar System. Its surface is heavily cratered, resembling Earth's Moon. The planet experiences extreme temperature variations, from scorching 430°C during the day to -180°C at night.",
+            
+            "Mercury has no atmosphere to speak of, just a thin exosphere made mostly of oxygen, sodium, hydrogen, helium, and potassium. This lack of atmosphere means there's no weather and no protection from meteoroid impacts.",
+            
+            "Despite being the closest planet to the Sun, Mercury is not the hottest planet - that's Venus. Mercury's orbit is highly elliptical, and it completes three rotations for every two orbits around the Sun.",
+            
+            "Mercury's core makes up about 55% of its volume, the largest core-to-planet ratio in the Solar System. This large iron core generates a magnetic field about 1% as strong as Earth's.",
+            
+            "The planet's surface is covered in wrinkles called scarps, formed as Mercury's core cooled and shrank. These scarps can be up to a mile high and hundreds of miles long."
         ]
     },
     "Venus": {
-        "color": (255, 198, 73),  # Yellow-orange
+        "color": (218, 165, 32),  # Golden
         "radius": 15,
         "orbit": 150,
         "speed": 0.015,
         "image": "venus.png",  # Add your pixel art filenames here
         "info": [
-            "Venus - The Hottest Planet",
-            "Temperature: 462°C",
-            "Rotates backwards",
-            "Similar size to Earth",
-            "Thick atmosphere of CO2",
-            "No moons"
+            "Venus is often called Earth's twin due to their similar size and mass, but it's a hostile world with surface temperatures hot enough to melt lead - around 462°C. This extreme heat is caused by a runaway greenhouse effect.",
+            
+            "The planet's thick atmosphere is primarily carbon dioxide, with clouds of sulfuric acid. The atmospheric pressure at the surface is 90 times greater than Earth's, equivalent to the pressure at 900 meters under Earth's oceans.",
+            
+            "Venus rotates backwards compared to most other planets, and its day is longer than its year. One Venusian day takes 243 Earth days, while it orbits the Sun in 225 Earth days.",
+            
+            "The surface of Venus is relatively young, reshaped by volcanic activity about 300-500 million years ago. The planet has more volcanoes than any other planet in the Solar System.",
+            
+            "Venus has no moons and no magnetic field. The lack of a magnetic field means the solar wind interacts directly with the atmosphere, causing some of it to escape into space."
         ]
     },
     "Earth": {
-        "color": (100, 149, 237),  # Cornflower blue
+        "color": (34, 139, 34),  # Green
         "radius": 18,
         "orbit": 200,
         "speed": 0.01,
         "image": "earth.png",  # Add your pixel art filenames here
         "info": [
-            "Earth - Our Home Planet",
-            "Temperature: -88°C to 58°C",
-            "One moon",
-            "Only known planet with life",
-            "71% covered by water",
-            "24-hour day cycle"
+            "Earth's atmosphere is a complex system that protects all life. The atmosphere is 78% nitrogen and 21% oxygen, with small amounts of other gases. The ozone layer, a special part of the atmosphere, blocks harmful UV radiation from reaching the surface.",
+            
+            "Earth's surface is a dynamic landscape shaped by powerful forces. 70% is covered by oceans containing liquid water, a unique feature in our solar system. The remaining 30% consists of continents with mountains, forests, and deserts.",
+            
+            "Earth's core is an incredible powerhouse. Its temperature matches the Sun's surface at about 5,400°C. This molten core generates a magnetic field that protects us from harmful solar radiation and helps some animals navigate.",
+            
+            "Earth's daily and yearly cycles create our familiar patterns of life. It completes one rotation every 24 hours, giving us day and night. The planet's 23.5-degree tilt causes our seasons as we orbit the Sun.",
+            
+            "Earth's gravity, averaging 9.8 m/s², keeps everything grounded. This force holds our atmosphere in place, keeps the oceans in their basins, and helps maintain the Moon's orbit."
         ]
     },
     "Mars": {
-        "color": (205, 127, 50),  # Rusty red
+        "color": (205, 92, 92),  # Indian red
         "radius": 14,
         "orbit": 250,
         "speed": 0.008,
         "image": "mars.png",  # Add your pixel art filenames here
         "info": [
-            "Mars - The Red Planet",
-            "Temperature: -140°C to 20°C",
-            "Two moons: Phobos and Deimos",
-            "Has the largest volcano in the solar system",
-            "Possible future human colony",
-            "Year length: 687 Earth days"
+            "Mars is known as the Red Planet due to iron oxide (rust) on its surface. It has a thin atmosphere made mostly of carbon dioxide, and atmospheric pressure less than 1% of Earth's. The low pressure means liquid water can't exist on the surface for long.",
+            
+            "Mars has the largest volcano in the Solar System, Olympus Mons, and the longest canyon, Valles Marineris. These features formed when Mars was geologically active, billions of years ago.",
+            
+            "Evidence suggests Mars once had liquid water on its surface. Ancient river valleys, lake beds, and minerals that only form in water's presence indicate Mars might have been habitable in the past.",
+            
+            "Mars has two small, irregularly shaped moons: Phobos and Deimos. They're likely captured asteroids and orbit very close to the planet. Phobos is gradually moving closer to Mars and will eventually break apart or crash into the planet.",
+            
+            "The planet experiences dramatic dust storms that can cover the entire planet and last for weeks or months. These storms, combined with the planet's red color, make Mars appear even more reddish during these events."
         ]
     },
     "Jupiter": {
-        "color": (255, 198, 73),  # Sandy yellow
+        "color": (244, 164, 96),  # Sandy brown
         "radius": 40,
         "orbit": 320,
         "speed": 0.005,
         "image": "jupiter.png",  # Add your pixel art filenames here
         "info": [
-            "Jupiter - The Largest Planet",
-            "Temperature: -110°C (cloud top)",
-            "79 known moons",
-            "Great Red Spot is a giant storm",
-            "More than twice the mass of all other planets combined",
-            "Year length: 12 Earth years"
+            "Jupiter is the largest planet in our Solar System, with a mass more than twice that of all other planets combined. It's a gas giant, primarily composed of hydrogen and helium, similar to the composition of the Sun.",
+            
+            "The Great Red Spot is Jupiter's most famous feature - a giant storm that has been raging for at least 400 years. This storm is so large that three Earths could fit inside it. The spot's color comes from unknown compounds that turn red when exposed to sunlight.",
+            
+            "Jupiter has the strongest magnetic field of any planet, about 14 times stronger than Earth's. This powerful field creates intense radiation belts around the planet and produces spectacular auroras at its poles.",
+            
+            "The planet has at least 79 known moons, including the four large Galilean moons: Io, Europa, Ganymede, and Callisto. Ganymede is the largest moon in the Solar System, bigger than the planet Mercury.",
+            
+            "Jupiter's atmosphere features multiple bands of clouds moving in alternating directions, creating zones and belts. These bands are driven by powerful winds that can reach speeds of up to 650 kilometers per hour."
         ]
     },
     "Saturn": {
-        "color": (238, 232, 205),  # Pale yellow
+        "color": (238, 232, 205),  # Pale goldenrod
         "radius": 35,
         "orbit": 400,
         "speed": 0.003,
         "image": "saturn.png",  # Add your pixel art filenames here
         "info": [
-            "Saturn - The Ringed Planet",
-            "Temperature: -178°C",
-            "82 confirmed moons",
-            "Famous for its beautiful rings",
-            "Could float in water (if there was a big enough pool)",
-            "Year length: 29.5 Earth years"
+            "Saturn is famous for its spectacular ring system, the most extensive in the Solar System. The rings are made mostly of water ice, with some rocky debris and dust. Despite being up to 280,000 km wide, the rings are only about 10 meters thick.",
+            
+            "Like Jupiter, Saturn is a gas giant composed mainly of hydrogen and helium. It's the only planet less dense than water - if there were a bathtub big enough, Saturn would float! This low density is due to its gaseous composition.",
+            
+            "Saturn has at least 82 moons, including Titan, the only moon in the Solar System with a substantial atmosphere. Titan is larger than Mercury and has lakes and seas of liquid methane on its surface.",
+            
+            "The planet's hexagonal storm at its north pole is a unique feature in the Solar System. This six-sided jet stream has been observed since the Voyager missions in the 1980s and is about 25,000 km across.",
+            
+            "Saturn's magnetic field is weaker than Jupiter's but still 578 times stronger than Earth's. The field creates auroras at both poles and interacts with the planet's rings and moons in complex ways."
         ]
     },
     "Uranus": {
@@ -148,12 +168,15 @@ planets = {
         "speed": 0.002,
         "image": "uranus.png",  # Add your pixel art filenames here
         "info": [
-            "Uranus - The Sideways Planet",
-            "Temperature: -224°C",
-            "27 known moons",
-            "Rotates on its side",
-            "First planet discovered by telescope",
-            "Year length: 84 Earth years"
+            "Uranus is unique among planets because it rotates on its side, with its axis tilted at 98 degrees. This unusual tilt means that its poles experience 42 years of continuous sunlight followed by 42 years of darkness.",
+            
+            "The planet is an ice giant, composed mainly of water, methane, and ammonia ices beneath its hydrogen-helium atmosphere. The methane in its atmosphere gives Uranus its blue-green color by absorbing red light.",
+            
+            "Uranus has 27 known moons, all named after characters from the works of William Shakespeare and Alexander Pope. The five largest are Miranda, Ariel, Umbriel, Titania, and Oberon.",
+            
+            "The planet's atmosphere contains layers of clouds at different heights. The innermost clouds are made of water, while the outer layers contain methane ice. Wind speeds can reach up to 900 kilometers per hour.",
+            
+            "Uranus has a complex ring system, though much fainter than Saturn's. These rings were the first to be discovered after Saturn's, found in 1977 when the planet passed in front of a star and briefly blocked its light."
         ]
     },
     "Neptune": {
@@ -163,12 +186,15 @@ planets = {
         "speed": 0.001,
         "image": "neptune.png",  # Add your pixel art filenames here
         "info": [
-            "Neptune - The Windy Planet",
-            "Temperature: -214°C",
-            "14 known moons",
-            "Strongest winds in the solar system",
-            "The most distant planet",
-            "Year length: 165 Earth years"
+            "Neptune is the windiest planet in the Solar System, with speeds reaching up to 2,100 kilometers per hour. These winds drive huge storms, including the Great Dark Spot, similar to Jupiter's Great Red Spot but more transient.",
+            
+            "Like Uranus, Neptune is an ice giant composed primarily of water, ammonia, and methane ices. Its blue color comes from methane in its atmosphere absorbing red light, but Neptune's blue is notably deeper than Uranus's blue-green.",
+            
+            "The planet has 14 known moons, with Triton being the largest. Triton orbits Neptune backwards (retrograde orbit), suggesting it's a captured Kuiper Belt object. It has active geysers that spew nitrogen ice and dust into space.",
+            
+            "Neptune's magnetic field is tilted 47 degrees from its rotational axis and offset from the planet's center. This unusual configuration creates complex magnetic interactions with the solar wind.",
+            
+            "The planet has a system of rings, though they're dark and difficult to see. These rings contain unusually high percentages of dust compared to ice, making them quite different from Saturn's bright, icy rings."
         ]
     }
 }
@@ -316,6 +342,16 @@ class Planet:
                                    (self.radius * 2, self.radius + i), 2)
             
             screen.blit(planet_surface, (self.x - self.radius, self.y - self.radius))
+
+        # Draw Saturn's rings if applicable
+        if self.name == "Saturn":
+            ring_surface = pygame.Surface((self.radius * 4, self.radius * 2), pygame.SRCALPHA)
+            for r in range(self.radius + 15, self.radius + 25):
+                alpha = int(150 * (1 - (r - self.radius - 15) / 10))
+                pygame.draw.ellipse(ring_surface, (*self.color, alpha),
+                                  (0, self.radius - r//4, self.radius * 4, r//2), 1)
+            screen.blit(ring_surface,
+                       (self.x - self.radius * 2, self.y - self.radius))
 
 class Bullet:
     def __init__(self, x, y, angle):
@@ -1198,6 +1234,8 @@ class SpaceExplorer:
                         self.history_images.append(img)
                     except pygame.error as e:
                         print(f"Could not load image {file}: {e}")
+        self.earth_platformer = None
+        self.planet_platformer = None
 
     def reset_rocket_position(self):
         if not self.planet_view:
@@ -1384,13 +1422,39 @@ class SpaceExplorer:
                 pygame.draw.circle(screen, color, 
                                  (int(center_x + x), int(center_y + y)), radius)
 
-            # Special details for specific planets
-            if self.current_planet.name == "Jupiter":
+            # Special handling for specific planets
+            if self.current_planet.name == "Saturn":
+                # Draw rings behind the planet first
+                ring_width = planet_radius * 1.2
+                ring_height = planet_radius * 0.1
+                
+                # Calculate ring tilt based on time for slow rotation
+                ring_tilt = math.sin(time.time() * 0.2) * 0.3 + 0.7  # Varies between 0.4 and 1.0
+                
+                # Draw the back half of the rings
+                num_rings = 8
+                for r in range(num_rings):
+                    # Calculate ring parameters
+                    ring_offset = r * (ring_width * 0.1)
+                    current_width = ring_width - ring_offset
+                    current_height = ring_height * ring_tilt
+                    
+                    # Darker color for back rings
+                    ring_color = (*self.current_planet.color, 40 - r * 4)
+                    
+                    # Draw back ellipse
+                    pygame.draw.ellipse(screen, ring_color,
+                                      (center_x - current_width,
+                                       center_y - current_height + r,
+                                       current_width * 2,
+                                       current_height * 2), 1)
+
+            elif self.current_planet.name == "Jupiter":
                 # Draw Jupiter's bands with smoother gradients
                 for i in range(-planet_radius, planet_radius, 8):
                     base_color = self.current_planet.color
                     stripe_color = tuple(min(255, c + 20 + int(10 * math.sin(i * 0.1))) 
-                                               for c in base_color)
+                                       for c in base_color)
                     y = center_y + i
                     x_offset = math.sqrt(max(0, planet_radius**2 - i**2))
                     pygame.draw.line(screen, stripe_color,
@@ -1401,6 +1465,18 @@ class SpaceExplorer:
         self.draw_option_button(screen, self.options['facts']['rect'], "FACTS", self.options['facts']['color'])
         self.draw_option_button(screen, self.options['quiz']['rect'], "QUIZ", self.options['quiz']['color'])
         self.draw_option_button(screen, self.options['back']['rect'], "BACK", self.options['back']['color'])
+
+        # Add shadow of planet on rings
+        shadow_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        shadow_width = planet_radius * 0.8
+        shadow_points = [
+            (center_x - shadow_width, center_y),
+            (center_x + shadow_width, center_y),
+            (center_x + planet_radius * 1.5, center_y + planet_radius),
+            (center_x - planet_radius * 1.5, center_y + planet_radius)
+        ]
+        pygame.draw.polygon(shadow_surface, (0, 0, 0, 100), shadow_points)
+        screen.blit(shadow_surface, (0, 0))
 
     def draw_sun(self):
         if self.use_sun_image:
@@ -1664,6 +1740,18 @@ class SpaceExplorer:
                     self.reset_rocket_position()
                 
                 self.rocket.draw(screen)
+            elif self.earth_platformer:
+                # Run the Earth platformer game
+                continue_space = self.earth_platformer.run()
+                if continue_space:
+                    self.earth_platformer = None
+                    self.exit_planet_view()
+            elif self.planet_platformer:
+                # Run the planet platformer game
+                continue_space = self.planet_platformer.run()
+                if continue_space:
+                    self.planet_platformer = None
+                    self.exit_planet_view()
             else:
                 keys = pygame.key.get_pressed()
                 self.rocket.update(keys)
@@ -1678,10 +1766,16 @@ class SpaceExplorer:
                     else:
                         option_hit = self.check_option_collisions()
                         if option_hit == 'facts':
-                            self.current_info_screen = InfoScreen(
-                                self.current_planet.name,
-                                planets[self.current_planet.name]["info"]
-                            )
+                            if self.current_planet.name == "Earth":
+                                self.earth_platformer = EarthPlatformer()
+                            else:
+                                # Create planet-specific platformer
+                                self.planet_platformer = PlanetPlatformer(
+                                    self.current_planet.name,
+                                    self.current_planet.color,
+                                    planets[self.current_planet.name]["info"],
+                                    (0, 0, 0)  # Black background
+                                )
                             self.reset_rocket_position()
                         elif option_hit == 'quiz':
                             self.current_quiz_screen = QuizScreen(self.current_planet.name)
