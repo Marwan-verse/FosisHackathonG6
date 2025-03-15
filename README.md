@@ -1,4 +1,4 @@
-# 🚀 Welcome to the Planet Quiz App! 🌍🌌
+# 🚀 Welcome to the Planet Quest App! 🌍🌌
 
 
 Planet Quiz is an **interactive and educational trivia game** designed to test and expand your knowledge of the **solar system**. 
