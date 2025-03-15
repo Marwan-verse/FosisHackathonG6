@@ -302,16 +302,6 @@ class Planet:
             
             screen.blit(planet_surface, (self.x - self.radius, self.y - self.radius))
 
-        # Draw Saturn's rings if applicable
-        if self.name == "Saturn":
-            ring_surface = pygame.Surface((self.radius * 4, self.radius * 2), pygame.SRCALPHA)
-            for r in range(self.radius + 15, self.radius + 25):
-                alpha = int(150 * (1 - (r - self.radius - 15) / 10))
-                pygame.draw.ellipse(ring_surface, (*self.color, alpha),
-                                  (0, self.radius - r//4, self.radius * 4, r//2), 1)
-            screen.blit(ring_surface,
-                       (self.x - self.radius * 2, self.y - self.radius))
-
 class Bullet:
     def __init__(self, x, y, angle):
         self.x = x
@@ -320,18 +310,43 @@ class Bullet:
         self.speed = BULLET_SPEED
         self.lifetime = BULLET_LIFETIME
         self.size = 3
+        self.bounces = 0  # Track number of bounces
+        self.max_bounces = 3  # Maximum number of bounces before disappearing
 
     def update(self):
+        # Update position
         self.x += math.cos(math.radians(self.angle)) * self.speed
         self.y += math.sin(math.radians(self.angle)) * self.speed
         self.lifetime -= 1
         
-        # Screen wrapping
-        self.x = self.x % WIDTH
-        self.y = self.y % HEIGHT
+        # Check for wall collisions and bounce
+        if self.x <= 0 or self.x >= WIDTH:
+            self.angle = 180 - self.angle  # Reverse horizontal direction
+            self.bounces += 1
+            # Add slight random angle variation on bounce
+            self.angle += random() * 10 - 5
+        
+        if self.y <= 0 or self.y >= HEIGHT:
+            self.angle = -self.angle  # Reverse vertical direction
+            self.bounces += 1
+            # Add slight random angle variation on bounce
+            self.angle += random() * 10 - 5
+        
+        # Keep angle in range 0-360
+        self.angle = self.angle % 360
+        
+        # Reduce speed slightly with each bounce
+        if self.bounces > 0:
+            self.speed = max(BULLET_SPEED * (0.8 ** self.bounces), 3)
 
     def draw(self, screen):
-        pygame.draw.circle(screen, (255, 255, 0), (int(self.x), int(self.y)), self.size)
+        # Draw bullet with color based on bounce count
+        color = (
+            min(255, 255 - self.bounces * 30),  # Reduce red
+            min(255, 255 - self.bounces * 30),  # Reduce yellow
+            min(255, self.bounces * 50)         # Add blue
+        )
+        pygame.draw.circle(screen, color, (int(self.x), int(self.y)), self.size)
 
 class Asteroid:
     def __init__(self):
@@ -442,7 +457,7 @@ class Rocket:
         # Update bullets
         for bullet in self.bullets[:]:
             bullet.update()
-            if bullet.lifetime <= 0:
+            if bullet.lifetime <= 0 or bullet.bounces >= bullet.max_bounces:
                 self.bullets.remove(bullet)
 
         # Forward thrust with both UP and W
@@ -1021,6 +1036,31 @@ class SpaceExplorer:
             'quiz': {'rect': pygame.Rect(WIDTH - 120, 20, 100, 40), 'color': (200, 100, 100)},
             'back': {'rect': pygame.Rect(WIDTH//2 - 100, HEIGHT - 60, 200, 40), 'color': (100, 100, 200)}
         }
+        
+        # Add sun image loading
+        try:
+            self.sun_image = pygame.image.load(os.path.join(ASSETS_DIR, "sun.png")).convert_alpha()
+            # Scale the sun image (adjust size as needed)
+            self.sun_image = pygame.transform.scale(self.sun_image, (150, 150))
+            self.use_sun_image = True
+            self.sun_rotation = 0  # Add rotation angle
+            self.sun_rotation_speed = 0.1  # Adjust this value to rotate faster/slower
+        except pygame.error as e:
+            print(f"Could not load sun image: {e}")
+            self.use_sun_image = False
+        
+        # Add menu state and font
+        self.in_menu = True
+        self.menu_font = pygame.font.Font(None, 74)
+        self.menu_alpha = 0
+        self.alpha_direction = 1
+        
+        # Replace launch button with galaxy particles
+        self.launch_button = {
+            'rect': pygame.Rect(WIDTH//2 - 150, HEIGHT//2 + 50, 300, 80),
+            'color': (100, 100, 200),
+            'hover': False
+        }
 
     def reset_rocket_position(self):
         if not self.planet_view:
@@ -1127,32 +1167,6 @@ class SpaceExplorer:
         center_x = WIDTH // 2
         center_y = HEIGHT // 2
 
-        if self.current_planet.name == "Saturn":
-            # Draw rings behind the planet first
-            ring_width = planet_radius * 1.2
-            ring_height = planet_radius * 0.1
-            
-            # Calculate ring tilt based on time for slow rotation
-            ring_tilt = math.sin(time.time() * 0.2) * 0.3 + 0.7  # Varies between 0.4 and 1.0
-            
-            # Draw the back half of the rings
-            num_rings = 8
-            for r in range(num_rings):
-                # Calculate ring parameters
-                ring_offset = r * (ring_width * 0.1)
-                current_width = ring_width - ring_offset
-                current_height = ring_height * ring_tilt
-                
-                # Darker color for back rings
-                ring_color = (*self.current_planet.color, 40 - r * 4)
-                
-                # Draw back ellipse
-                pygame.draw.ellipse(screen, ring_color,
-                                  (center_x - current_width,
-                                   center_y - current_height + r,
-                                   current_width * 2,
-                                   current_height * 2), 1)
-
         # Draw planet glow/atmosphere with smoother gradient
         for radius in range(planet_radius + 20, planet_radius - 2, -1):
             alpha = int(20 * (radius - planet_radius + 2) / 22)
@@ -1169,46 +1183,7 @@ class SpaceExplorer:
                              (int(center_x + x), int(center_y + y)), radius)
 
         # Special details for specific planets
-        if self.current_planet.name == "Saturn":
-            # Draw the front half of the rings with brighter colors
-            for r in range(num_rings):
-                # Calculate ring parameters
-                ring_offset = r * (ring_width * 0.1)
-                current_width = ring_width - ring_offset
-                current_height = ring_height * ring_tilt
-                
-                # Brighter color for front rings
-                ring_color = (*self.current_planet.color, 150 - r * 15)
-                
-                # Draw front ellipse
-                pygame.draw.ellipse(screen, ring_color,
-                                  (center_x - current_width,
-                                   center_y + r,
-                                   current_width * 2,
-                                   current_height * 2), 1)
-                
-                # Add ring detail lines for texture
-                if r % 2 == 0:
-                    detail_color = (*self.current_planet.color, 100 - r * 10)
-                    pygame.draw.ellipse(screen, detail_color,
-                                      (center_x - current_width + 10,
-                                       center_y + r + 2,
-                                       (current_width - 10) * 2,
-                                       (current_height - 2) * 2), 1)
-
-            # Add shadow of planet on rings
-            shadow_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            shadow_width = planet_radius * 0.8
-            shadow_points = [
-                (center_x - shadow_width, center_y),
-                (center_x + shadow_width, center_y),
-                (center_x + planet_radius * 1.5, center_y + planet_radius),
-                (center_x - planet_radius * 1.5, center_y + planet_radius)
-            ]
-            pygame.draw.polygon(shadow_surface, (0, 0, 0, 100), shadow_points)
-            screen.blit(shadow_surface, (0, 0))
-
-        elif self.current_planet.name == "Jupiter":
+        if self.current_planet.name == "Jupiter":
             # Draw Jupiter's bands with smoother gradients
             for i in range(-planet_radius, planet_radius, 8):
                 base_color = self.current_planet.color
@@ -1225,6 +1200,115 @@ class SpaceExplorer:
         self.draw_option_button(screen, self.options['quiz']['rect'], "QUIZ", self.options['quiz']['color'])
         self.draw_option_button(screen, self.options['back']['rect'], "BACK", self.options['back']['color'])
 
+    def draw_sun(self):
+        if self.use_sun_image:
+            # Update rotation
+            self.sun_rotation = (self.sun_rotation + self.sun_rotation_speed) % 360
+            
+            # Create pulsing effect for the image
+            pulse = abs(math.sin(time.time())) * 10
+            pulse_size = int(150 + pulse)  # Base size 150px + pulse
+            
+            # Draw sun glow/corona
+            corona_surfaces = []
+            for i in range(5):
+                corona_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+                radius = 80 + i * 10
+                alpha = int(100 * (1 - i/5))
+                pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (100, 100), radius)
+                corona_surfaces.append(corona_surf)
+            
+            # Draw corona layers
+            for surf in corona_surfaces:
+                screen.blit(surf, (WIDTH//2 - 100, HEIGHT//2 - 100))
+            
+            # Scale and rotate the sun image
+            scaled_sun = pygame.transform.scale(
+                self.sun_image, 
+                (pulse_size, pulse_size)
+            )
+            rotated_sun = pygame.transform.rotate(scaled_sun, self.sun_rotation)
+            
+            # Center the sun image
+            sun_rect = rotated_sun.get_rect(
+                center=(WIDTH // 2, HEIGHT // 2)
+            )
+            
+            # Draw the sun image
+            screen.blit(rotated_sun, sun_rect)
+            
+        else:
+            # Fallback to original sun drawing code
+            corona_surfaces = []
+            for i in range(5):
+                corona_surf = pygame.Surface((150, 150), pygame.SRCALPHA)
+                radius = 60 + i * 10
+                alpha = int(100 * (1 - i/5))
+                pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (75, 75), radius)
+                corona_surfaces.append(corona_surf)
+            
+            pulse = abs(math.sin(time.time())) * 10
+            
+            for surf in corona_surfaces:
+                screen.blit(surf, (WIDTH//2 - 75, HEIGHT//2 - 75))
+            
+            pygame.draw.circle(screen, YELLOW, (WIDTH//2, HEIGHT//2), 50 + pulse)
+            
+            for i in range(8):
+                angle = time.time() + i * math.pi/4
+                x = WIDTH//2 + math.cos(angle) * 45
+                y = HEIGHT//2 + math.sin(angle) * 45
+                pygame.draw.circle(screen, (255, 200, 50), (int(x), int(y)), 10)
+
+    def draw_menu(self, screen):
+        # Draw background
+        screen.fill(BLACK)
+        
+        # Draw animated stars
+        for star in self.stars:
+            star.update()
+            star.draw(screen)
+        
+        # Draw title text with glow effect
+        title_text = self.menu_font.render("SPACE EXPLORER", True, WHITE)
+        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+        
+        # Draw title glow
+        glow_surf = pygame.Surface((title_text.get_width() + 20, title_text.get_height() + 20), pygame.SRCALPHA)
+        glow_color = (255, 255, 255, self.menu_alpha)
+        glow_text = self.menu_font.render("SPACE EXPLORER", True, glow_color)
+        glow_rect = glow_text.get_rect(center=(glow_surf.get_width() // 2, glow_surf.get_height() // 2))
+        glow_surf.blit(glow_text, glow_rect)
+        screen.blit(glow_surf, (title_rect.x - 10, title_rect.y - 10))
+        screen.blit(title_text, title_rect)
+        
+        # Update button hover state
+        mouse_pos = pygame.mouse.get_pos()
+        self.launch_button['hover'] = self.launch_button['rect'].collidepoint(mouse_pos)
+        
+        # Draw launch button with glow effect
+        button_color = (150, 150, 255) if self.launch_button['hover'] else self.launch_button['color']
+        
+        # Draw button glow
+        glow_rect = self.launch_button['rect'].inflate(16, 16)
+        for i in range(3):
+            glow_alpha = 100 - i * 30
+            glow_surface = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(glow_surface, (*button_color, glow_alpha), 
+                           glow_surface.get_rect(), border_radius=10)
+            screen.blit(glow_surface, glow_rect.topleft)
+        
+        # Draw main button
+        button_surface = pygame.Surface((self.launch_button['rect'].width, self.launch_button['rect'].height), pygame.SRCALPHA)
+        pygame.draw.rect(button_surface, (*button_color, 200), 
+                        button_surface.get_rect(), border_radius=8)
+        screen.blit(button_surface, self.launch_button['rect'].topleft)
+        
+        # Draw button text
+        launch_text = self.menu_font.render("LAUNCH", True, WHITE)
+        text_rect = launch_text.get_rect(center=self.launch_button['rect'].center)
+        screen.blit(launch_text, text_rect)
+
     def run(self):
         clock = pygame.time.Clock()
         
@@ -1233,6 +1317,12 @@ class SpaceExplorer:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left click
+                        if self.in_menu:
+                            # Check if click is within launch button
+                            if self.launch_button['rect'].collidepoint(event.pos):
+                                self.in_menu = False
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE and self.current_info_screen:
                         self.current_info_screen = None
@@ -1243,7 +1333,9 @@ class SpaceExplorer:
                         elif self.planet_view:
                             self.exit_planet_view()
 
-            if self.current_info_screen:
+            if self.in_menu:
+                self.draw_menu(screen)
+            elif self.current_info_screen:
                 self.current_info_screen.draw(screen)
             elif self.current_quiz_screen:
                 self.current_quiz_screen.draw(screen, self.rocket)
@@ -1350,33 +1442,6 @@ class SpaceExplorer:
 
             pygame.display.flip()
             clock.tick(60)
-
-    def draw_sun(self):
-        # Draw sun corona
-        corona_surfaces = []
-        for i in range(5):
-            corona_surf = pygame.Surface((150, 150), pygame.SRCALPHA)
-            radius = 60 + i * 10
-            alpha = int(100 * (1 - i/5))
-            pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (75, 75), radius)
-            corona_surfaces.append(corona_surf)
-        
-        # Create pulsing effect
-        pulse = abs(math.sin(time.time())) * 10
-        
-        # Draw corona layers
-        for surf in corona_surfaces:
-            screen.blit(surf, (WIDTH//2 - 75, HEIGHT//2 - 75))
-        
-        # Draw sun core
-        pygame.draw.circle(screen, YELLOW, (WIDTH//2, HEIGHT//2), 50 + pulse)
-        
-        # Draw sun surface details
-        for i in range(8):
-            angle = time.time() + i * math.pi/4
-            x = WIDTH//2 + math.cos(angle) * 45
-            y = HEIGHT//2 + math.sin(angle) * 45
-            pygame.draw.circle(screen, (255, 200, 50), (int(x), int(y)), 10)
 
 if __name__ == "__main__":
     explorer = SpaceExplorer()
