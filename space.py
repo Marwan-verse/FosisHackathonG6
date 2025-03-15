@@ -21,7 +21,7 @@ YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 ORANGE = (255, 165, 0)
-STAR_COLORS = [(255, 255, 255), (255, 255, 200), (200, 200, 255), (255, 200, 200)]
+STAR_COLORS = [(255, 255, 255), (200, 200, 255), (255, 200, 200), (255, 255, 200)]
 
 # Add after other constants
 ASSETS_DIR = "assets"  # Create this directory to store your pixel art images
@@ -36,6 +36,21 @@ BULLET_LIFETIME = 60  # frames
 
 # Planet data with extended information
 planets = {
+    "Sun": {
+        "color": (255, 200, 50),  # Bright yellow
+        "radius": 40,
+        "orbit": 0,
+        "speed": 0,
+        "image": "sun.png",
+        "info": [
+            "The Sun - Our Star",
+            "Temperature: 5,500°C (surface)",
+            "Age: 4.6 billion years",
+            "Type: Yellow Dwarf Star",
+            "Contains 99.86% of solar system's mass",
+            "Powered by nuclear fusion"
+        ]
+    },
     "Mercury": {
         "color": (169, 169, 169),  # Grey
         "radius": 10,
@@ -409,8 +424,8 @@ class Comet:
             self.x = randint(0, WIDTH)
             self.y = 0 if random() < 0.5 else HEIGHT
         
-        # Slower speed range (was originally faster)
-        self.speed = random() * 2 + 1  # Speed between 1 and 3
+        # Increased speed range (was 1-3, now 3-6)
+        self.speed = random() * 3 + 3  # Speed between 3 and 6
         
         # Calculate target point avoiding middle area
         center_x = WIDTH // 2
@@ -457,7 +472,7 @@ class Comet:
 class Rocket:
     def __init__(self):
         self.x = WIDTH // 2
-        self.y = HEIGHT // 2
+        self.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
         self.angle = 0
         self.speed = 0
         self.acceleration = 0.1
@@ -950,6 +965,38 @@ class QuizScreen:
                     "answers": ["Methane gas", "Water ice", "Nitrogen", "Hydrogen"],
                     "correct": 0
                 }
+            ],
+            "Sun": [
+                {
+                    "question": "What type of star is the Sun?",
+                    "answers": ["Yellow Dwarf", "Red Giant", "White Dwarf", "Neutron Star"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long does it take sunlight to reach Earth?",
+                    "answers": ["8 minutes", "2 minutes", "30 minutes", "1 second"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's core temperature?",
+                    "answers": ["15 million °C", "5,500 °C", "1 million °C", "100,000 °C"],
+                    "correct": 0
+                },
+                {
+                    "question": "What process powers the Sun?",
+                    "answers": ["Nuclear Fusion", "Nuclear Fission", "Chemical Burning", "Solar Wind"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's outermost layer called?",
+                    "answers": ["Corona", "Photosphere", "Chromosphere", "Core"],
+                    "correct": 0
+                },
+                {
+                    "question": "What percentage of the solar system's mass is in the Sun?",
+                    "answers": ["99.86%", "75%", "85%", "95%"],
+                    "correct": 0
+                }
             ]
         }
         self.used_questions = []
@@ -1065,13 +1112,13 @@ class QuizScreen:
 
     def reset_rocket(self, rocket):
         rocket.x = WIDTH // 2  # Center horizontally
-        rocket.y = HEIGHT // 2  # Center vertically
+        rocket.y = HEIGHT * 3 // 4  # Changed from HEIGHT // 2 to HEIGHT * 3 // 4
         rocket.speed = 0
         self.rocket_reset_position = False
 
 class SpaceExplorer:
     def __init__(self):
-        self.planets = [Planet(name, data) for name, data in planets.items()]
+        self.planets = [Planet(name, data) for name, data in planets.items() if name != "Sun"]
         self.stars = [Star() for _ in range(200)]
         self.rocket = Rocket()
         self.asteroids = []
@@ -1095,11 +1142,11 @@ class SpaceExplorer:
         # Add sun image loading
         try:
             self.sun_image = pygame.image.load(os.path.join(ASSETS_DIR, "sun.png")).convert_alpha()
-            # Scale the sun image (adjust size as needed)
-            self.sun_image = pygame.transform.scale(self.sun_image, (150, 150))
+            # Scale the sun image (reduced size from 150 to 100)
+            self.sun_image = pygame.transform.scale(self.sun_image, (100, 100))
             self.use_sun_image = True
-            self.sun_rotation = 0  # Add rotation angle
-            self.sun_rotation_speed = 0.1  # Adjust this value to rotate faster/slower
+            self.sun_rotation = 0
+            self.sun_rotation_speed = 0.1
         except pygame.error as e:
             print(f"Could not load sun image: {e}")
             self.use_sun_image = False
@@ -1118,28 +1165,73 @@ class SpaceExplorer:
         }
         self.comets = []
         self.comet_spawn_timer = 0
+        
+        # Add development button with increased width
+        self.dev_button = {
+            'rect': pygame.Rect(WIDTH//2 - 200, HEIGHT//2 + 150, 400, 80),  # Increased width from 300 to 400
+            'color': (100, 200, 100),
+            'hover': False
+        }
+        
+        # Add development mode properties
+        self.in_dev_mode = False
+        self.history_images = []
+        self.current_image_index = 0
+        
+        # Load history images
+        history_dir = "history"
+        if os.path.exists(history_dir):
+            for file in os.listdir(history_dir):
+                if file.endswith(".jpg"):
+                    try:
+                        img_path = os.path.join(history_dir, file)
+                        img = pygame.image.load(img_path)
+                        # Scale image to fit screen while maintaining aspect ratio
+                        img_ratio = img.get_width() / img.get_height()
+                        if img_ratio > WIDTH / HEIGHT:
+                            new_width = WIDTH
+                            new_height = int(WIDTH / img_ratio)
+                        else:
+                            new_height = HEIGHT
+                            new_width = int(HEIGHT * img_ratio)
+                        img = pygame.transform.scale(img, (new_width, new_height))
+                        self.history_images.append(img)
+                    except pygame.error as e:
+                        print(f"Could not load image {file}: {e}")
 
     def reset_rocket_position(self):
         if not self.planet_view:
+            # Position rocket in the upper middle of the solar system screen
             self.rocket.x = WIDTH // 2
-            self.rocket.y = HEIGHT // 2
+            self.rocket.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
         else:
             if self.current_quiz_screen:
-                # Position rocket in the middle for quiz
+                # Position rocket in the upper middle for quiz
                 self.rocket.x = WIDTH // 2
-                self.rocket.y = HEIGHT // 2
+                self.rocket.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
             else:
                 # Position rocket on the planet screen
                 self.rocket.x = WIDTH // 2
-                self.rocket.y = HEIGHT - 100
+                self.rocket.y = HEIGHT // 4  # Changed from HEIGHT - 100 to HEIGHT // 4
         self.rocket.speed = 0
         self.cooldown = 30
 
     def check_collisions(self):
         if not self.planet_view:
+            # First check collision with Sun (changed radius from 60 to 40)
+            distance_to_sun = math.sqrt(
+                (self.rocket.x - WIDTH//2)**2 + 
+                (self.rocket.y - HEIGHT//2)**2
+            )
+            if distance_to_sun < 40 + self.rocket.size:  # Changed from 60 to 40
+                return Planet("Sun", planets["Sun"])
+            
+            # Then check other planets
             for planet in self.planets:
-                distance = math.sqrt((self.rocket.x - planet.x)**2 + 
-                                   (self.rocket.y - planet.y)**2)
+                distance = math.sqrt(
+                    (self.rocket.x - planet.x)**2 + 
+                    (self.rocket.y - planet.y)**2
+                )
                 if distance < planet.radius + self.rocket.size:
                     return planet
         return None
@@ -1207,6 +1299,43 @@ class SpaceExplorer:
         text_rect = text_surface.get_rect(center=rect.center)
         screen.blit(text_surface, text_rect)
 
+    def update_space_objects(self):
+        # Update comets
+        self.comet_spawn_timer -= 1
+        if self.comet_spawn_timer <= 0 and len(self.comets) < 3:
+            if random() < 0.05:
+                self.comets.append(Comet())
+                self.comet_spawn_timer = randint(120, 240)
+        
+        # Update existing comets
+        for comet in self.comets[:]:
+            comet.update()
+            if (comet.x < -50 or comet.x > WIDTH + 50 or 
+                comet.y < -50 or comet.y > HEIGHT + 50):
+                self.comets.remove(comet)
+        
+        # Update asteroids
+        if len(self.asteroids) < MAX_ASTEROIDS and random() < ASTEROID_SPAWN_RATE:
+            self.asteroids.append(Asteroid())
+
+        for asteroid in self.asteroids[:]:
+            asteroid.update()
+            
+            # Check collision with bullets
+            for bullet in self.rocket.bullets[:]:
+                if asteroid.check_collision(bullet.x, bullet.y, bullet.size):
+                    if asteroid in self.asteroids:
+                        self.asteroids.remove(asteroid)
+                    if bullet in self.rocket.bullets:
+                        self.rocket.bullets.remove(bullet)
+                    break
+            
+            # Remove asteroids that are far off screen
+            if (asteroid.x < -100 or asteroid.x > WIDTH + 100 or 
+                asteroid.y < -100 or asteroid.y > HEIGHT + 100):
+                if asteroid in self.asteroids:
+                    self.asteroids.remove(asteroid)
+
     def draw_planet_screen(self, screen):
         # Draw a space background
         screen.fill(BLACK)
@@ -1219,38 +1348,54 @@ class SpaceExplorer:
             star_color = tuple(int(c * brightness) for c in color)
             pygame.draw.circle(screen, star_color, (int(star_x), int(star_y)), size)
 
-        # Calculate planet size
-        planet_radius = self.current_planet.radius * 8
-        center_x = WIDTH // 2
-        center_y = HEIGHT // 2
+        # Draw comets and asteroids
+        for comet in self.comets:
+            comet.draw(screen)
+        for asteroid in self.asteroids:
+            asteroid.draw(screen)
 
-        # Draw planet glow/atmosphere with smoother gradient
-        for radius in range(planet_radius + 20, planet_radius - 2, -1):
-            alpha = int(20 * (radius - planet_radius + 2) / 22)
-            glow_color = (*self.current_planet.color, alpha)
-            pygame.draw.circle(screen, glow_color, (center_x, center_y), radius)
+        # Special handling for Sun view
+        if self.current_planet.name == "Sun":
+            if self.use_sun_image:
+                self.draw_sun()  # Use the existing sun drawing method
+            else:
+                # Fallback to basic sun drawing if image isn't available
+                center_x = WIDTH // 2
+                center_y = HEIGHT // 2
+                pygame.draw.circle(screen, YELLOW, (center_x, center_y), 60)
+        else:
+            # Regular planet drawing code
+            planet_radius = self.current_planet.radius * 8
+            center_x = WIDTH // 2
+            center_y = HEIGHT // 2
 
-        # Draw main planet body
-        pygame.draw.circle(screen, self.current_planet.color, (center_x, center_y), planet_radius)
+            # Draw planet glow/atmosphere with smoother gradient
+            for radius in range(planet_radius + 20, planet_radius - 2, -1):
+                alpha = int(20 * (radius - planet_radius + 2) / 22)
+                glow_color = (*self.current_planet.color, alpha)
+                pygame.draw.circle(screen, glow_color, (center_x, center_y), radius)
 
-        # Draw persistent surface details
-        for x, y, radius, shade in self.surface_details:
-            color = tuple(max(0, min(255, c + shade)) for c in self.current_planet.color)
-            pygame.draw.circle(screen, color, 
-                             (int(center_x + x), int(center_y + y)), radius)
+            # Draw main planet body
+            pygame.draw.circle(screen, self.current_planet.color, (center_x, center_y), planet_radius)
 
-        # Special details for specific planets
-        if self.current_planet.name == "Jupiter":
-            # Draw Jupiter's bands with smoother gradients
-            for i in range(-planet_radius, planet_radius, 8):
-                base_color = self.current_planet.color
-                stripe_color = tuple(min(255, c + 20 + int(10 * math.sin(i * 0.1))) 
-                                   for c in base_color)
-                y = center_y + i
-                x_offset = math.sqrt(max(0, planet_radius**2 - i**2))
-                pygame.draw.line(screen, stripe_color,
-                               (center_x - x_offset, y),
-                               (center_x + x_offset, y), 3)
+            # Draw persistent surface details
+            for x, y, radius, shade in self.surface_details:
+                color = tuple(max(0, min(255, c + shade)) for c in self.current_planet.color)
+                pygame.draw.circle(screen, color, 
+                                 (int(center_x + x), int(center_y + y)), radius)
+
+            # Special details for specific planets
+            if self.current_planet.name == "Jupiter":
+                # Draw Jupiter's bands with smoother gradients
+                for i in range(-planet_radius, planet_radius, 8):
+                    base_color = self.current_planet.color
+                    stripe_color = tuple(min(255, c + 20 + int(10 * math.sin(i * 0.1))) 
+                                               for c in base_color)
+                    y = center_y + i
+                    x_offset = math.sqrt(max(0, planet_radius**2 - i**2))
+                    pygame.draw.line(screen, stripe_color,
+                                   (center_x - x_offset, y),
+                                   (center_x + x_offset, y), 3)
 
         # Draw interactive options
         self.draw_option_button(screen, self.options['facts']['rect'], "FACTS", self.options['facts']['color'])
@@ -1264,7 +1409,7 @@ class SpaceExplorer:
             
             # Create pulsing effect for the image
             pulse = abs(math.sin(time.time())) * 10
-            pulse_size = int(150 + pulse)  # Base size 150px + pulse
+            pulse_size = int(100 + pulse)  # Base size 100px + pulse
             
             # Draw sun glow/corona
             corona_surfaces = []
@@ -1298,16 +1443,16 @@ class SpaceExplorer:
             # Fallback to original sun drawing code
             corona_surfaces = []
             for i in range(5):
-                corona_surf = pygame.Surface((150, 150), pygame.SRCALPHA)
+                corona_surf = pygame.Surface((100, 100), pygame.SRCALPHA)
                 radius = 60 + i * 10
                 alpha = int(100 * (1 - i/5))
-                pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (75, 75), radius)
+                pygame.draw.circle(corona_surf, (255, 200, 50, alpha), (50, 50), radius)
                 corona_surfaces.append(corona_surf)
             
             pulse = abs(math.sin(time.time())) * 10
             
             for surf in corona_surfaces:
-                screen.blit(surf, (WIDTH//2 - 75, HEIGHT//2 - 75))
+                screen.blit(surf, (WIDTH//2 - 50, HEIGHT//2 - 50))
             
             pygame.draw.circle(screen, YELLOW, (WIDTH//2, HEIGHT//2), 50 + pulse)
             
@@ -1342,6 +1487,7 @@ class SpaceExplorer:
         # Update button hover state
         mouse_pos = pygame.mouse.get_pos()
         self.launch_button['hover'] = self.launch_button['rect'].collidepoint(mouse_pos)
+        self.dev_button['hover'] = self.dev_button['rect'].collidepoint(mouse_pos)
         
         # Draw launch button with glow effect
         button_color = (150, 150, 255) if self.launch_button['hover'] else self.launch_button['color']
@@ -1365,6 +1511,80 @@ class SpaceExplorer:
         launch_text = self.menu_font.render("LAUNCH", True, WHITE)
         text_rect = launch_text.get_rect(center=self.launch_button['rect'].center)
         screen.blit(launch_text, text_rect)
+        
+        # Draw development button
+        dev_color = (150, 255, 150) if self.dev_button['hover'] else self.dev_button['color']
+        
+        # Draw button glow
+        glow_rect = self.dev_button['rect'].inflate(16, 16)
+        for i in range(3):
+            glow_alpha = 100 - i * 30
+            glow_surface = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(glow_surface, (*dev_color, glow_alpha), 
+                           glow_surface.get_rect(), border_radius=10)
+            screen.blit(glow_surface, glow_rect.topleft)
+        
+        # Draw main button
+        button_surface = pygame.Surface((self.dev_button['rect'].width, self.dev_button['rect'].height), pygame.SRCALPHA)
+        pygame.draw.rect(button_surface, (*dev_color, 200), 
+                        button_surface.get_rect(), border_radius=8)
+        screen.blit(button_surface, self.dev_button['rect'].topleft)
+        
+        # Draw button text
+        dev_text = self.menu_font.render("DEVELOPMENT", True, WHITE)
+        text_rect = dev_text.get_rect(center=self.dev_button['rect'].center)
+        screen.blit(dev_text, text_rect)
+
+    def draw_dev_mode(self, screen):
+        if not self.history_images:
+            screen.fill(BLACK)
+            text = self.large_font.render("No history images found", True, WHITE)
+            screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2))
+            return
+
+        # Draw current image
+        current_img = self.history_images[self.current_image_index]
+        # Center the image
+        x = (WIDTH - current_img.get_width()) // 2
+        y = (HEIGHT - current_img.get_height()) // 2
+        screen.blit(current_img, (x, y))
+
+        # Update and draw space objects
+        self.update_space_objects()  # Update asteroids and comets
+        
+        # Draw comets and asteroids
+        for comet in self.comets:
+            comet.draw(screen)
+        for asteroid in self.asteroids:
+            asteroid.draw(screen)
+
+        # Draw rocket
+        self.rocket.draw(screen)
+
+        # Draw escape text in corner with glow effect
+        escape_text = "press escape to go back to menu"
+        text_surface = self.font.render(escape_text, True, WHITE)
+        text_rect = text_surface.get_rect()
+        text_rect.bottomright = (WIDTH - 20, HEIGHT - 20)  # Position in bottom-right corner
+
+        # Add glow effect
+        glow_surface = pygame.Surface((text_rect.width + 4, text_rect.height + 4), pygame.SRCALPHA)
+        for offset in range(3):
+            glow_alpha = 100 - offset * 30
+            glow_text = self.font.render(escape_text, True, (255, 255, 255, glow_alpha))
+            glow_rect = glow_text.get_rect(center=(glow_surface.get_width()//2, glow_surface.get_height()//2))
+            glow_surface.blit(glow_text, glow_rect)
+        
+        screen.blit(glow_surface, (text_rect.x - 2, text_rect.y - 2))
+        screen.blit(text_surface, text_rect)
+
+        # Check if rocket moves to next/previous image
+        if self.rocket.x > WIDTH - 50:  # Move to next image
+            self.current_image_index = (self.current_image_index + 1) % len(self.history_images)
+            self.rocket.x = 51
+        elif self.rocket.x < 50:  # Move to previous image
+            self.current_image_index = (self.current_image_index - 1) % len(self.history_images)
+            self.rocket.x = WIDTH - 51
 
     def run(self):
         clock = pygame.time.Clock()
@@ -1377,34 +1597,63 @@ class SpaceExplorer:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
                         if self.in_menu:
-                            # Check if click is within launch button
-                            if self.launch_button['rect'].collidepoint(event.pos):
+                            mouse_pos = pygame.mouse.get_pos()
+                            if self.launch_button['rect'].collidepoint(mouse_pos):
                                 self.in_menu = False
+                            elif self.dev_button['rect'].collidepoint(mouse_pos):
+                                self.in_menu = False
+                                self.in_dev_mode = True
+                                self.rocket.x = WIDTH // 2
+                                self.rocket.y = HEIGHT // 2
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE and self.current_info_screen:
-                        self.current_info_screen = None
-                    elif event.key == pygame.K_ESCAPE:
-                        if self.current_info_screen:
+                    if event.key == pygame.K_ESCAPE:
+                        if self.in_dev_mode:
+                            self.in_dev_mode = False
+                            self.in_menu = True
+                        elif self.current_info_screen:
                             self.current_info_screen = None
-                            self.reset_rocket_position()
                         elif self.planet_view:
                             self.exit_planet_view()
+                        elif not self.in_menu:  # If in solar system view
+                            self.in_menu = True
+                            self.reset_rocket_position()
 
+            # Update space objects for all game states except menu
+            if not self.in_menu:
+                self.update_space_objects()
+
+            # Update button hover states in menu
             if self.in_menu:
+                mouse_pos = pygame.mouse.get_pos()
+                self.launch_button['hover'] = self.launch_button['rect'].collidepoint(mouse_pos)
+                self.dev_button['hover'] = self.dev_button['rect'].collidepoint(mouse_pos)
                 self.draw_menu(screen)
+            elif self.in_dev_mode:
+                keys = pygame.key.get_pressed()
+                self.rocket.update(keys)
+                self.draw_dev_mode(screen)
             elif self.current_info_screen:
                 self.current_info_screen.draw(screen)
+                # Draw space objects in info screen
+                for comet in self.comets:
+                    comet.draw(screen)
+                for asteroid in self.asteroids:
+                    asteroid.draw(screen)
             elif self.current_quiz_screen:
                 self.current_quiz_screen.draw(screen, self.rocket)
                 
-                # Reset rocket position if needed
-                if hasattr(self.current_quiz_screen, 'rocket_reset_position') and self.current_quiz_screen.rocket_reset_position:
+                if self.current_quiz_screen.rocket_reset_position:
                     self.current_quiz_screen.reset_rocket(self.rocket)
                 
                 keys = pygame.key.get_pressed()
                 self.rocket.update(keys)
                 
-                # Check for quiz answer collisions
+                # Draw space objects
+                for comet in self.comets:
+                    comet.draw(screen)
+                for asteroid in self.asteroids:
+                    asteroid.draw(screen)
+                
                 rocket_rect = pygame.Rect(self.rocket.x - self.rocket.size, 
                                         self.rocket.y - self.rocket.size,
                                         self.rocket.size * 2, 
@@ -1423,46 +1672,6 @@ class SpaceExplorer:
                     self.cooldown -= 1
                 else:
                     if not self.planet_view:
-                        # Update comets
-                        self.comet_spawn_timer -= 1
-                        if self.comet_spawn_timer <= 0 and len(self.comets) < 3:  # Maximum 3 comets at once
-                            if random() < 0.05:  # 5% chance to spawn a comet
-                                self.comets.append(Comet())
-                                self.comet_spawn_timer = randint(120, 240)  # Wait 2-4 seconds before checking again
-                        
-                        # Update existing comets
-                        for comet in self.comets[:]:
-                            comet.update()
-                            if (comet.x < -50 or comet.x > WIDTH + 50 or 
-                                comet.y < -50 or comet.y > HEIGHT + 50):
-                                self.comets.remove(comet)
-                        
-                        # Draw comets
-                        for comet in self.comets:
-                            comet.draw(screen)
-                        
-                        # Update asteroids
-                        if len(self.asteroids) < MAX_ASTEROIDS and random() < ASTEROID_SPAWN_RATE:
-                            self.asteroids.append(Asteroid())
-
-                        for asteroid in self.asteroids[:]:
-                            asteroid.update()
-                            
-                            # Check collision with bullets
-                            for bullet in self.rocket.bullets[:]:
-                                if asteroid.check_collision(bullet.x, bullet.y, bullet.size):
-                                    if asteroid in self.asteroids:
-                                        self.asteroids.remove(asteroid)
-                                    if bullet in self.rocket.bullets:
-                                        self.rocket.bullets.remove(bullet)
-                                    break
-                            
-                            # Check collision with rocket
-                            if asteroid.check_collision(self.rocket.x, self.rocket.y, self.rocket.size):
-                                self.reset_rocket_position()
-                                if asteroid in self.asteroids:
-                                    self.asteroids.remove(asteroid)
-
                         collided_planet = self.check_collisions()
                         if collided_planet:
                             self.enter_planet_view(collided_planet)
@@ -1481,7 +1690,7 @@ class SpaceExplorer:
                             self.exit_planet_view()
 
                 screen.fill(BLACK)
-
+                
                 if not self.planet_view:
                     for star in self.stars:
                         star.update()
@@ -1490,12 +1699,28 @@ class SpaceExplorer:
                     for planet in self.planets:
                         planet.update()
                         planet.draw(screen)
-                    # Draw comets
+                    # Draw comets and asteroids after planets
                     for comet in self.comets:
                         comet.draw(screen)
-                    # Draw asteroids
                     for asteroid in self.asteroids:
                         asteroid.draw(screen)
+                
+                    # Add escape text in corner with glow effect
+                    escape_text = "press escape to go back to menu"
+                    text_surface = self.font.render(escape_text, True, WHITE)
+                    text_rect = text_surface.get_rect()
+                    text_rect.bottomright = (WIDTH - 20, HEIGHT - 20)
+
+                    # Add glow effect
+                    glow_surface = pygame.Surface((text_rect.width + 4, text_rect.height + 4), pygame.SRCALPHA)
+                    for offset in range(3):
+                        glow_alpha = 100 - offset * 30
+                        glow_text = self.font.render(escape_text, True, (255, 255, 255, glow_alpha))
+                        glow_rect = glow_text.get_rect(center=(glow_surface.get_width()//2, glow_surface.get_height()//2))
+                        glow_surface.blit(glow_text, glow_rect)
+                    
+                    screen.blit(glow_surface, (text_rect.x - 2, text_rect.y - 2))
+                    screen.blit(text_surface, text_rect)
                 else:
                     self.draw_planet_screen(screen)
 
