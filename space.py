@@ -1,7 +1,7 @@
 import pygame
 import math
 import sys
-from random import randint, choice, random
+from random import randint, choice, random, shuffle  # Add shuffle to the imports
 import time
 import os
 from earth_platformer import EarthPlatformer
@@ -467,10 +467,10 @@ class Comet:
             self.y = randint(0, HEIGHT)
         else:
             self.x = randint(0, WIDTH)
-            self.y = 0 if random() < 0.5 else HEIGHT
+            self.y = 0 if random() < 0.1 else HEIGHT
         
         # Increased speed range (was 1-3, now 3-6)
-        self.speed = random() * 3 + 3  # Speed between 3 and 6
+        self.speed = random() * 3 + 2  # Speed between 3 and 6
         
         # Calculate target point avoiding middle area
         center_x = WIDTH // 2
@@ -516,8 +516,8 @@ class Comet:
 
 class Rocket:
     def __init__(self):
-        self.x = WIDTH // 2
-        self.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
+        self.x = 100  # Changed from WIDTH // 2
+        self.y = 100  # Changed from HEIGHT // 4
         self.angle = 0
         self.speed = 0
         self.acceleration = 0.1
@@ -553,7 +553,7 @@ class Rocket:
         
         self.bullets = []
         self.shoot_cooldown = 0
-        self.shoot_delay = 10  # Frames between shots
+        self.shoot_delay = 15  # Frames between shots
 
     def update(self, keys):
         # Rotation with both arrow keys and A/D
@@ -723,8 +723,9 @@ class InfoScreen:
     def __init__(self, planet_name, info):
         self.planet_name = planet_name
         self.info = info
-        self.font_title = pygame.font.Font(None, 48)
-        self.font_info = pygame.font.Font(None, 36)
+        # Update fonts to Courier
+        self.font_title = pygame.font.SysFont('courier', 48)
+        self.font_info = pygame.font.SysFont('courier', 36)
 
     def draw(self, screen):
         screen.fill(BLACK)
@@ -743,32 +744,139 @@ class InfoScreen:
         screen.blit(exit_text, (WIDTH//2 - exit_text.get_width()//2, HEIGHT - 100))
 
 class QuizScreen:
-    def __init__(self, planet_name):
-        self.font = pygame.font.Font(None, 36)
+    def __init__(self, planet_name, parent):
+        self.parent = parent
+        # Update font to Courier
+        self.font = pygame.font.SysFont('courier', 36)
         self.planet_name = planet_name
         self.show_correct_answer = False
+        
+        # Adjust option boxes to be wider
         self.options = {
-            'answer1': {'rect': pygame.Rect(WIDTH//4 - 150, HEIGHT//2 - 100, 300, 50), 'color': (100, 100, 200)},
-            'answer2': {'rect': pygame.Rect(WIDTH*3//4 - 150, HEIGHT//2 - 100, 300, 50), 'color': (100, 100, 200)},
-            'answer3': {'rect': pygame.Rect(WIDTH//4 - 150, HEIGHT//2 + 50, 300, 50), 'color': (100, 100, 200)},
-            'answer4': {'rect': pygame.Rect(WIDTH*3//4 - 150, HEIGHT//2 + 50, 300, 50), 'color': (100, 100, 200)},
-            'back': {'rect': pygame.Rect(WIDTH//2 - 100, HEIGHT - 60, 200, 40), 'color': (100, 100, 200)}
+            'answer1': {'rect': pygame.Rect(WIDTH//4 - 200, HEIGHT//2 - 100, 400, 50), 'color': (100, 100, 200)},
+            'answer2': {'rect': pygame.Rect(WIDTH*3//4 - 200, HEIGHT//2 - 100, 400, 50), 'color': (100, 100, 200)},
+            'answer3': {'rect': pygame.Rect(WIDTH//4 - 200, HEIGHT//2 + 50, 400, 50), 'color': (100, 100, 200)},
+            'answer4': {'rect': pygame.Rect(WIDTH*3//4 - 200, HEIGHT//2 + 50, 400, 50), 'color': (100, 100, 200)},
+            'back': {'rect': pygame.Rect(WIDTH//2 - 120, HEIGHT - 60, 240, 40), 'color': (100, 100, 200)}
         }
-        self.questions = {
-            "Mercury": [
+        
+        self.used_questions = []
+        self.result = None
+        self.result_timer = 0
+        self.rocket_reset_position = False
+        self.stars = [(randint(0, WIDTH), randint(0, HEIGHT), random() * 2, choice(STAR_COLORS)) 
+                     for _ in range(100)]
+
+        # Get planet-specific questions
+        self.questions = self.get_questions_for_planet(planet_name)
+        try:
+            self.get_new_question()
+        except Exception as e:
+            print(f"Error in initialization: {e}")
+            self.current_question = {
+                "question": "Loading Error",
+                "answers": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                "correct": 0
+            }
+
+        # Add particle system for correct answer effect
+        self.particles = []
+        self.particle_colors = [
+            (100, 255, 100),  # Light green
+            (50, 200, 50),    # Medium green
+            (0, 255, 0),      # Bright green
+            (150, 255, 150)   # Pale green
+        ]
+
+    def get_questions_for_planet(self, planet_name):
+        if planet_name == "Sun":
+            return [
                 {
-                    "question": "What is Mercury's position from the Sun?",
-                    "answers": ["First", "Second", "Third", "Fourth"],
+                    "question": "What type of star is the Sun?",
+                    "answers": ["Yellow Dwarf", "Red Giant", "White Dwarf", "Blue Giant"],
                     "correct": 0
                 },
                 {
-                    "question": "How long is a year on Mercury?",
-                    "answers": ["88 Earth days", "225 Earth days", "365 Earth days", "687 Earth days"],
+                    "question": "What is the Sun's surface temperature?",
+                    "answers": ["5,500°C", "1,000°C", "10,000°C", "3,000°C"],
                     "correct": 0
                 },
                 {
-                    "question": "What is Mercury's surface temperature range?",
-                    "answers": ["-180°C to 430°C", "-50°C to 100°C", "0°C to 100°C", "-100°C to 200°C"],
+                    "question": "What powers the Sun?",
+                    "answers": ["Nuclear fusion", "Nuclear fission", "Chemical reactions", "Electrical energy"],
+                    "correct": 0
+                },
+                {
+                    "question": "How much of the solar system's mass is in the Sun?",
+                    "answers": ["99.86%", "75%", "50%", "85%"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long does light from the Sun take to reach Earth?",
+                    "answers": ["8 minutes", "1 hour", "1 second", "30 minutes"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's core temperature?",
+                    "answers": ["15 million °C", "5,500°C", "1 million °C", "10,000°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes sunspots?",
+                    "answers": ["Magnetic activity", "Solar flares", "Asteroid impacts", "Gas explosions"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many Earths could fit inside the Sun?",
+                    "answers": ["1.3 million", "100,000", "500,000", "2 million"],
+                    "correct": 0
+                },
+                {
+                    "question": "What will happen to the Sun in its final stage?",
+                    "answers": ["Become a White Dwarf", "Explode as Supernova", "Become a Black Hole", "Fade Away"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's rotation period at its equator?",
+                    "answers": ["27 Earth days", "365 Earth days", "7 Earth days", "100 Earth days"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's atmosphere called?",
+                    "answers": ["Corona", "Photosphere", "Chromosphere", "Magnetosphere"],
+                    "correct": 0
+                },
+                {
+                    "question": "What percentage of the Sun's energy reaches Earth?",
+                    "answers": ["0.0000001%", "1%", "10%", "0.1%"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes solar wind?",
+                    "answers": ["Escaping plasma", "Nuclear fusion", "Surface explosions", "Magnetic fields"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long will the Sun continue to shine?",
+                    "answers": ["5 billion years", "1 billion years", "10 billion years", "500 million years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What element is most abundant in the Sun?",
+                    "answers": ["Hydrogen", "Helium", "Oxygen", "Carbon"],
+                    "correct": 0
+                }
+            ]
+        elif planet_name == "Mercury":
+            return [
+                {
+                    "question": "What is Mercury's average distance from the Sun?",
+                    "answers": ["57.9 million km", "149.6 million km", "227.9 million km", "778.5 million km"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the surface temperature range on Mercury?",
+                    "answers": ["-180°C to 430°C", "-140°C to 320°C", "-90°C to 200°C", "0°C to 100°C"],
                     "correct": 0
                 },
                 {
@@ -777,163 +885,383 @@ class QuizScreen:
                     "correct": 0
                 },
                 {
-                    "question": "What is Mercury named after?",
-                    "answers": ["Roman messenger god", "Greek war god", "Norse thunder god", "Egyptian sun god"],
+                    "question": "What is Mercury's core made of?",
+                    "answers": ["Iron", "Rock", "Ice", "Gas"],
                     "correct": 0
                 },
                 {
-                    "question": "What is Mercury's atmosphere like?",
-                    "answers": ["Almost none", "Thick and cloudy", "Thin but breathable", "Mostly hydrogen"],
+                    "question": "How long is a Mercury day?",
+                    "answers": ["176 Earth days", "24 Earth hours", "50 Earth days", "365 Earth days"],
+                    "correct": 0
+                },
+                {
+                    "question": "Why is Mercury heavily cratered?",
+                    "answers": ["No atmosphere", "Low gravity", "High temperature", "Solar winds"],
+                    "correct": 0
+                },
+                {
+                    "question": "What spacecraft first visited Mercury?",
+                    "answers": ["Mariner 10", "Voyager 1", "Pioneer", "New Horizons"],
+                    "correct": 0
+                },
+                {
+                    "question": "What percentage of Mercury's volume is its core?",
+                    "answers": ["55%", "25%", "35%", "45%"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Mercury's surface scarps?",
+                    "answers": ["Core cooling", "Solar heat", "Meteor impacts", "Volcanic activity"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Mercury's orbital period?",
+                    "answers": ["88 Earth days", "225 Earth days", "365 Earth days", "687 Earth days"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Mercury's atmosphere called?",
+                    "answers": ["Exosphere", "Troposphere", "Stratosphere", "None"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Mercury's tail?",
+                    "answers": ["Solar wind", "Volcanic gas", "Asteroid debris", "Cosmic rays"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Mercury's magnetic field strength compared to Earth's?",
+                    "answers": ["1%", "10%", "50%", "100%"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Mercury's nickname?",
+                    "answers": ["Swift Planet", "Morning Star", "Red Planet", "Gas Giant"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Mercury's orbit?",
+                    "answers": ["Most elliptical", "Most circular", "Fastest", "Slowest"],
                     "correct": 0
                 }
-            ],
-            "Venus": [
+            ]
+        elif planet_name == "Venus":
+            return [
                 {
-                    "question": "What is Venus's most notable feature?",
-                    "answers": ["Ring System", "Great Red Spot", "Thick Atmosphere", "Ice Caps"],
-                    "correct": 2
-                },
-                {
-                    "question": "Why is Venus so hot?",
-                    "answers": ["Greenhouse effect", "Close to Sun", "Volcanic activity", "Core temperature"],
-                    "correct": 0
-                },
-                {
-                    "question": "What direction does Venus rotate?",
-                    "answers": ["Backwards", "Forwards", "Doesn't rotate", "Sideways"],
+                    "question": "What is Venus's atmospheric composition mainly?",
+                    "answers": ["Carbon Dioxide", "Nitrogen", "Oxygen", "Hydrogen"],
                     "correct": 0
                 },
                 {
                     "question": "What is Venus's surface temperature?",
-                    "answers": ["462°C", "100°C", "250°C", "350°C"],
+                    "answers": ["462°C", "15°C", "120°C", "-63°C"],
                     "correct": 0
                 },
                 {
-                    "question": "What is Venus often called?",
-                    "answers": ["Earth's twin", "Red Planet", "Gas Giant", "Ice Planet"],
+                    "question": "Venus rotates in which direction?",
+                    "answers": ["Clockwise", "Counter-clockwise", "It doesn't rotate", "Changes direction"],
                     "correct": 0
                 },
                 {
-                    "question": "What makes up most of Venus's atmosphere?",
-                    "answers": ["Carbon dioxide", "Nitrogen", "Oxygen", "Hydrogen"],
+                    "question": "What creates Venus's greenhouse effect?",
+                    "answers": ["CO2 atmosphere", "Water vapor", "Methane", "Oxygen"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many Earth days is a Venusian day?",
+                    "answers": ["243", "100", "365", "500"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Venus's lightning?",
+                    "answers": ["Volcanic activity", "Solar radiation", "Atmospheric pressure", "Surface heat"],
+                    "correct": 0
+                },
+                {
+                    "question": "What color is Venus's surface?",
+                    "answers": ["Orange-red", "Blue", "Green", "White"],
+                    "correct": 0
+                },
+                {
+                    "question": "What percentage of Earth's gravity is Venus's?",
+                    "answers": ["90%", "50%", "75%", "110%"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Venus's super-rotation?",
+                    "answers": ["Atmospheric dynamics", "Solar radiation", "Core rotation", "Surface heat"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Venus's atmospheric pressure compared to Earth's?",
+                    "answers": ["90 times greater", "50 times greater", "20 times greater", "10 times greater"],
+                    "correct": 0
+                },
+                {
+                    "question": "What are Venus's clouds made of?",
+                    "answers": ["Sulfuric acid", "Water vapor", "Methane", "Nitrogen"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many volcanoes are on Venus?",
+                    "answers": ["1,600+", "500", "100", "50"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Venus's nickname?",
+                    "answers": ["Morning Star", "Red Planet", "Gas Giant", "Ice Giant"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many moons does Venus have?",
+                    "answers": ["0", "1", "2", "3"],
+                    "correct": 0
+                },
+                {
+                    "question": "What spacecraft first mapped Venus's surface?",
+                    "answers": ["Magellan", "Voyager", "Pioneer", "Cassini"],
                     "correct": 0
                 }
-            ],
-            "Earth": [
+            ]
+        elif planet_name == "Earth":
+            return [
                 {
-                    "question": "How many moons does Earth have?",
-                    "answers": ["None", "One", "Two", "Three"],
-                    "correct": 1
+                    "question": "What percentage of Earth's atmosphere is nitrogen?",
+                    "answers": ["78%", "21%", "1%", "50%"],
+                    "correct": 0
                 },
                 {
-                    "question": "What makes Earth unique in our solar system?",
-                    "answers": ["Known life", "Has water", "Has atmosphere", "Has a moon"],
+                    "question": "How long does it take Earth to orbit the Sun?",
+                    "answers": ["365.25 days", "300 days", "400 days", "500 days"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Earth's core mainly made of?",
+                    "answers": ["Iron and Nickel", "Gold and Silver", "Rock and Stone", "Ice and Water"],
                     "correct": 0
                 },
                 {
                     "question": "What percentage of Earth is covered by water?",
-                    "answers": ["51%", "61%", "71%", "81%"],
-                    "correct": 2
-                },
-                {
-                    "question": "How long is Earth's day cycle?",
-                    "answers": ["12 hours", "24 hours", "36 hours", "48 hours"],
-                    "correct": 1
-                },
-                {
-                    "question": "What is Earth's core made of?",
-                    "answers": ["Iron and nickel", "Rock and magma", "Gold and silver", "Ice and rock"],
+                    "answers": ["71%", "50%", "85%", "60%"],
                     "correct": 0
                 },
                 {
-                    "question": "What protects Earth from solar radiation?",
-                    "answers": ["Magnetic field", "Atmosphere", "Ozone layer", "All of these"],
-                    "correct": 3
+                    "question": "What causes Earth's seasons?",
+                    "answers": ["Axial tilt", "Distance from Sun", "Rotation speed", "Ocean currents"],
+                    "correct": 0
+                },
+                {
+                    "question": "How old is Earth?",
+                    "answers": ["4.54 billion years", "2 billion years", "6 billion years", "3 billion years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Earth's average surface temperature?",
+                    "answers": ["15°C", "25°C", "0°C", "30°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "How thick is Earth's crust on average?",
+                    "answers": ["30 kilometers", "100 kilometers", "10 kilometers", "500 kilometers"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Earth's magnetic field?",
+                    "answers": ["Liquid outer core", "Solar radiation", "Moon's gravity", "Atmosphere"],
+                    "correct": 0
+                },
+                {
+                    "question": "How fast does Earth rotate at the equator?",
+                    "answers": ["1,037 mph", "500 mph", "2,000 mph", "100 mph"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Earth's atmosphere mostly made of?",
+                    "answers": ["Nitrogen", "Oxygen", "Carbon dioxide", "Argon"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many layers does Earth's atmosphere have?",
+                    "answers": ["5", "3", "7", "4"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Earth's average distance from the Sun?",
+                    "answers": ["93 million miles", "50 million miles", "150 million miles", "200 million miles"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many tectonic plates does Earth have?",
+                    "answers": ["7 major plates", "4 major plates", "10 major plates", "15 major plates"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Earth in our solar system?",
+                    "answers": ["Only planet with liquid water", "Largest planet", "Hottest planet", "Fastest rotating"],
+                    "correct": 0
                 }
-            ],
-            "Mars": [
+            ]
+        elif planet_name == "Mars":
+            return [
                 {
                     "question": "What gives Mars its red color?",
-                    "answers": ["Iron Oxide", "Methane", "Sulfur", "Carbon Dioxide"],
-                    "correct": 0
-                },
-                {
-                    "question": "What is the name of Mars's largest volcano?",
-                    "answers": ["Olympus Mons", "Mount Everest", "Mauna Kea", "Valles Marineris"],
+                    "answers": ["Iron Oxide (Rust)", "Red Rocks", "Red Vegetation", "Red Gases"],
                     "correct": 0
                 },
                 {
                     "question": "How many moons does Mars have?",
-                    "answers": ["Two", "One", "Three", "None"],
+                    "answers": ["2", "1", "3", "0"],
                     "correct": 0
                 },
                 {
-                    "question": "What is Mars's year length in Earth days?",
-                    "answers": ["687", "365", "550", "825"],
+                    "question": "What is the name of Mars' largest volcano?",
+                    "answers": ["Olympus Mons", "Mount Everest", "Mauna Kea", "Mount Vesuvius"],
                     "correct": 0
                 },
                 {
-                    "question": "What is the largest canyon on Mars called?",
-                    "answers": ["Valles Marineris", "Grand Canyon", "Hellas Basin", "Argyre Planitia"],
+                    "question": "What is Mars' atmosphere mostly made of?",
+                    "answers": ["Carbon Dioxide", "Nitrogen", "Oxygen", "Hydrogen"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is a Martian day?",
+                    "answers": ["24 hours 37 minutes", "24 hours", "30 hours", "20 hours"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the average temperature on Mars?",
+                    "answers": ["-63°C", "15°C", "-10°C", "-100°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the name of Mars' largest canyon?",
+                    "answers": ["Valles Marineris", "Grand Canyon", "Olympus Valley", "Hellas Basin"],
+                    "correct": 0
+                },
+                {
+                    "question": "What are Mars' moons called?",
+                    "answers": ["Phobos and Deimos", "Titan and Europa", "Io and Ganymede", "Luna and Charon"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Mars' dust storms?",
+                    "answers": ["Solar heating", "Volcanic activity", "Meteor impacts", "Underground explosions"],
+                    "correct": 0
+                },
+                {
+                    "question": "How strong is Mars' gravity compared to Earth's?",
+                    "answers": ["38%", "50%", "75%", "25%"],
                     "correct": 0
                 },
                 {
                     "question": "What evidence suggests Mars once had water?",
-                    "answers": ["Dried riverbeds", "Blue color", "Cloud formations", "Plant fossils"],
+                    "answers": ["River valleys", "Blue rocks", "Green patches", "Steam vents"],
+                    "correct": 0
+                },
+                {
+                    "question": "How thick is Mars' atmosphere compared to Earth's?",
+                    "answers": ["1%", "10%", "25%", "50%"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Mars' nickname?",
+                    "answers": ["The Red Planet", "The Blue Planet", "The Ringed Planet", "The Ice Planet"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is Mars' year?",
+                    "answers": ["687 Earth days", "365 Earth days", "500 Earth days", "800 Earth days"],
+                    "correct": 0
+                },
+                {
+                    "question": "What type of ice is found at Mars' poles?",
+                    "answers": ["Water and CO2", "Nitrogen", "Methane", "Ammonia"],
                     "correct": 0
                 }
-            ],
-            "Jupiter": [
-                {
-                    "question": "What is Jupiter's most famous feature?",
-                    "answers": ["Ice Caps", "Great Red Spot", "Ring System", "Water Oceans"],
-                    "correct": 1
-                },
-                {
-                    "question": "What type of planet is Jupiter?",
-                    "answers": ["Gas giant", "Rocky planet", "Ice giant", "Dwarf planet"],
-                    "correct": 0
-                },
-                {
-                    "question": "How many known moons does Jupiter have?",
-                    "answers": ["79", "50", "63", "92"],
-                    "correct": 0
-                },
-                {
-                    "question": "How long is Jupiter's year in Earth years?",
-                    "answers": ["12", "8", "15", "20"],
-                    "correct": 0
-                },
+            ]
+        elif planet_name == "Jupiter":
+            return [
                 {
                     "question": "What is Jupiter's Great Red Spot?",
-                    "answers": ["A storm", "A volcano", "A crater", "An ocean"],
+                    "answers": ["A giant storm", "A volcano", "A crater", "A desert"],
                     "correct": 0
                 },
                 {
-                    "question": "Which moon of Jupiter might have life?",
-                    "answers": ["Europa", "Io", "Ganymede", "Callisto"],
+                    "question": "How many moons does Jupiter have?",
+                    "answers": ["79+", "50", "25", "10"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Jupiter mainly made of?",
+                    "answers": ["Hydrogen and Helium", "Rock and Metal", "Ice and Water", "Carbon Dioxide"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is a day on Jupiter?",
+                    "answers": ["10 Earth hours", "24 Earth hours", "5 Earth hours", "48 Earth hours"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Jupiter's colorful bands?",
+                    "answers": ["Atmospheric flows", "Surface painting", "Magnetic fields", "Solar radiation"],
+                    "correct": 0
+                },
+                {
+                    "question": "How strong is Jupiter's magnetic field compared to Earth's?",
+                    "answers": ["14 times stronger", "5 times stronger", "2 times stronger", "Same strength"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Jupiter's largest moon?",
+                    "answers": ["Ganymede", "Io", "Europa", "Callisto"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many Earth's could fit inside Jupiter?",
+                    "answers": ["1,321", "500", "2,000", "100"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Great Red Spot's size compared to Earth?",
+                    "answers": ["2-3 Earths wide", "Same size", "Half Earth's size", "10 Earths wide"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long has the Great Red Spot existed?",
+                    "answers": ["At least 400 years", "50 years", "1000 years", "100 years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What are Jupiter's rings made of?",
+                    "answers": ["Dust", "Ice", "Rock", "Gas"],
+                    "correct": 0
+                },
+                {
+                    "question": "What spacecraft first visited Jupiter?",
+                    "answers": ["Pioneer 10", "Voyager 1", "Galileo", "Cassini"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Jupiter's core temperature?",
+                    "answers": ["24,000°C", "5,000°C", "50,000°C", "10,000°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is Jupiter's year?",
+                    "answers": ["12 Earth years", "5 Earth years", "20 Earth years", "8 Earth years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Jupiter's auroras?",
+                    "answers": ["Magnetic field", "Solar wind", "Moon interactions", "Surface radiation"],
                     "correct": 0
                 }
-            ],
-            "Saturn": [
-                {
-                    "question": "What is Saturn most famous for?",
-                    "answers": ["Great Red Spot", "Blue Color", "Ring System", "High Temperature"],
-                    "correct": 2
-                },
+            ]
+        elif planet_name == "Saturn":
+            return [
                 {
                     "question": "What are Saturn's rings made of?",
-                    "answers": ["Ice and rock", "Gas clouds", "Metal debris", "Liquid hydrogen"],
-                    "correct": 0
-                },
-                {
-                    "question": "How many confirmed moons does Saturn have?",
-                    "answers": ["82", "63", "45", "95"],
-                    "correct": 0
-                },
-                {
-                    "question": "What is unique about Saturn's density?",
-                    "answers": ["Could float in water", "Heaviest planet", "Densest atmosphere", "Solid core"],
+                    "answers": ["Ice and Rock", "Gas", "Metal", "Dust"],
                     "correct": 0
                 },
                 {
@@ -942,148 +1270,342 @@ class QuizScreen:
                     "correct": 0
                 },
                 {
-                    "question": "How wide are Saturn's rings?",
-                    "answers": ["175,000 miles", "50,000 miles", "100,000 miles", "25,000 miles"],
+                    "question": "Would Saturn float in water?",
+                    "answers": ["Yes", "No", "Sometimes", "Only in salt water"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many major rings does Saturn have?",
+                    "answers": ["7", "5", "10", "3"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Saturn mainly made of?",
+                    "answers": ["Hydrogen and Helium", "Rock and Metal", "Ice and Water", "Carbon Dioxide"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is a day on Saturn?",
+                    "answers": ["10.7 Earth hours", "24 Earth hours", "5 Earth hours", "48 Earth hours"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many moons does Saturn have?",
+                    "answers": ["82", "50", "25", "100"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Titan?",
+                    "answers": ["Has thick atmosphere", "Is perfectly round", "Has water oceans", "Is very hot"],
+                    "correct": 0
+                },
+                {
+                    "question": "How thick are Saturn's rings?",
+                    "answers": ["10 meters", "10 kilometers", "100 kilometers", "1 kilometer"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Saturn's hexagonal storm?",
+                    "answers": ["Jet stream pattern", "Magnetic field", "Moon gravity", "Ring shadows"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is Saturn's year?",
+                    "answers": ["29.5 Earth years", "10 Earth years", "50 Earth years", "15 Earth years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What spacecraft studied Saturn extensively?",
+                    "answers": ["Cassini", "Voyager", "Pioneer", "Galileo"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Saturn's average temperature?",
+                    "answers": ["-178°C", "-50°C", "-100°C", "-300°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "How strong is Saturn's magnetic field?",
+                    "answers": ["578 times Earth's", "100 times Earth's", "1000 times Earth's", "50 times Earth's"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Saturn's yellowish color?",
+                    "answers": ["Atmospheric chemicals", "Ring reflection", "Surface rocks", "Solar radiation"],
                     "correct": 0
                 }
-            ],
-            "Uranus": [
-                {
-                    "question": "What is unique about Uranus's rotation?",
-                    "answers": ["Very Fast", "Rotates Backwards", "Rotates on its Side", "Doesn't Rotate"],
-                    "correct": 2
-                },
-                {
-                    "question": "What type of planet is Uranus?",
-                    "answers": ["Ice giant", "Gas giant", "Rocky planet", "Dwarf planet"],
-                    "correct": 0
-                },
-                {
-                    "question": "How many known moons does Uranus have?",
-                    "answers": ["27", "15", "32", "21"],
-                    "correct": 0
-                },
-                {
-                    "question": "What is Uranus's temperature?",
-                    "answers": ["-224°C", "-180°C", "-150°C", "-200°C"],
-                    "correct": 0
-                },
-                {
-                    "question": "What gives Uranus its blue-green color?",
-                    "answers": ["Methane gas", "Water ice", "Ammonia clouds", "Hydrogen"],
-                    "correct": 0
-                },
-                {
-                    "question": "Who discovered Uranus?",
-                    "answers": ["William Herschel", "Galileo Galilei", "Johannes Kepler", "Edwin Hubble"],
-                    "correct": 0
-                }
-            ],
-            "Neptune": [
-                {
-                    "question": "What is Neptune known for?",
-                    "answers": ["Strongest Winds", "Highest Temperature", "Most Moons", "Closest to Sun"],
-                    "correct": 0
-                },
-                {
-                    "question": "How fast are Neptune's strongest winds?",
-                    "answers": ["2,100 km/h", "1,200 km/h", "800 km/h", "1,500 km/h"],
-                    "correct": 0
-                },
-                {
-                    "question": "How many known moons does Neptune have?",
-                    "answers": ["14", "8", "21", "17"],
-                    "correct": 0
-                },
-                {
-                    "question": "How long is Neptune's year in Earth years?",
-                    "answers": ["165", "120", "200", "150"],
-                    "correct": 0
-                },
+            ]
+        elif planet_name == "Neptune":
+            return [
                 {
                     "question": "What is Neptune's largest moon?",
                     "answers": ["Triton", "Nereid", "Naiad", "Thalassa"],
                     "correct": 0
                 },
                 {
-                    "question": "What makes Neptune blue?",
-                    "answers": ["Methane gas", "Water ice", "Nitrogen", "Hydrogen"],
-                    "correct": 0
-                }
-            ],
-            "Sun": [
-                {
-                    "question": "What type of star is the Sun?",
-                    "answers": ["Yellow Dwarf", "Red Giant", "White Dwarf", "Neutron Star"],
+                    "question": "What are Neptune's wind speeds?",
+                    "answers": ["2,100 km/h", "1,000 km/h", "500 km/h", "100 km/h"],
                     "correct": 0
                 },
                 {
-                    "question": "How long does it take sunlight to reach Earth?",
-                    "answers": ["8 minutes", "2 minutes", "30 minutes", "1 second"],
+                    "question": "What gives Neptune its blue color?",
+                    "answers": ["Methane", "Water", "Nitrogen", "Oxygen"],
                     "correct": 0
                 },
                 {
-                    "question": "What is the Sun's core temperature?",
-                    "answers": ["15 million °C", "5,500 °C", "1 million °C", "100,000 °C"],
+                    "question": "How many Earth masses is Neptune?",
+                    "answers": ["17", "10", "5", "25"],
                     "correct": 0
                 },
                 {
-                    "question": "What process powers the Sun?",
-                    "answers": ["Nuclear Fusion", "Nuclear Fission", "Chemical Burning", "Solar Wind"],
+                    "question": "How many rings does Neptune have?",
+                    "answers": ["5", "3", "7", "10"],
                     "correct": 0
                 },
                 {
-                    "question": "What is the Sun's outermost layer called?",
-                    "answers": ["Corona", "Photosphere", "Chromosphere", "Core"],
+                    "question": "What is Neptune's Great Dark Spot?",
+                    "answers": ["A storm system", "A crater", "A sea", "A mountain"],
                     "correct": 0
                 },
                 {
-                    "question": "What percentage of the solar system's mass is in the Sun?",
-                    "answers": ["99.86%", "75%", "85%", "95%"],
+                    "question": "How long is Neptune's year?",
+                    "answers": ["165 Earth years", "100 Earth years", "200 Earth years", "50 Earth years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Neptune's average temperature?",
+                    "answers": ["-214°C", "-100°C", "-150°C", "-300°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many moons does Neptune have?",
+                    "answers": ["14", "8", "20", "5"],
+                    "correct": 0
+                },
+                {
+                    "question": "What spacecraft has visited Neptune?",
+                    "answers": ["Voyager 2", "Pioneer", "Cassini", "New Horizons"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Triton's orbit?",
+                    "answers": ["Backwards orbit", "Perfect circle", "Very fast", "Very slow"],
+                    "correct": 0
+                },
+                {
+                    "question": "How was Neptune discovered?",
+                    "answers": ["Mathematical prediction", "Telescope observation", "Space probe", "Accident"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Neptune mainly made of?",
+                    "answers": ["Ice and rock", "Hydrogen and helium", "Pure ice", "Pure rock"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is a day on Neptune?",
+                    "answers": ["16 Earth hours", "24 Earth hours", "10 Earth hours", "48 Earth hours"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Neptune's magnetic field?",
+                    "answers": ["Liquid metallic core", "Solar radiation", "Moon interaction", "Ring system"],
                     "correct": 0
                 }
             ]
-        }
-        self.used_questions = []
-        self.get_new_question()
-        self.result = None
-        self.result_timer = 0
-        self.rocket_reset_position = False
-        self.stars = [(randint(0, WIDTH), randint(0, HEIGHT), random() * 2, choice(STAR_COLORS)) 
-                     for _ in range(100)]
+        elif planet_name == "Uranus":
+            return [
+                {
+                    "question": "What gives Uranus its blue-green color?",
+                    "answers": ["Methane gas", "Water", "Nitrogen", "Oxygen"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many rings does Uranus have?",
+                    "answers": ["13", "7", "20", "None"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Uranus's rotation?",
+                    "answers": ["It rotates on its side", "It doesn't rotate", "It rotates backwards", "It rotates very fast"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many moons does Uranus have?",
+                    "answers": ["27", "15", "32", "8"],
+                    "correct": 0
+                },
+                {
+                    "question": "What are Uranus's moons named after?",
+                    "answers": ["Shakespeare characters", "Greek gods", "Roman gods", "Scientists"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is a year on Uranus?",
+                    "answers": ["84 Earth years", "50 Earth years", "100 Earth years", "30 Earth years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Uranus mainly made of?",
+                    "answers": ["Ice and rock", "Hydrogen and helium", "Pure ice", "Pure rock"],
+                    "correct": 0
+                },
+                {
+                    "question": "What spacecraft has visited Uranus?",
+                    "answers": ["Voyager 2", "Pioneer", "Cassini", "None"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Uranus's average temperature?",
+                    "answers": ["-224°C", "-100°C", "-150°C", "-300°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "Who discovered Uranus?",
+                    "answers": ["William Herschel", "Galileo Galilei", "Johannes Kepler", "Isaac Newton"],
+                    "correct": 0
+                },
+                {
+                    "question": "What type of planet is Uranus?",
+                    "answers": ["Ice Giant", "Gas Giant", "Rocky Planet", "Dwarf Planet"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Uranus's extreme seasons?",
+                    "answers": ["Its tilted axis", "Its distance from Sun", "Its moons", "Its atmosphere"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is a day on Uranus?",
+                    "answers": ["17 Earth hours", "24 Earth hours", "10 Earth hours", "48 Earth hours"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Uranus's largest moon?",
+                    "answers": ["Titania", "Miranda", "Oberon", "Ariel"],
+                    "correct": 0
+                },
+                {
+                    "question": "What color are Uranus's rings?",
+                    "answers": ["Dark grey", "Blue", "White", "Red"],
+                    "correct": 0
+                }
+            ]
+        # Add default questions if planet not found
+        return [
+            {
+                "question": f"What is {planet_name}?",
+                "answers": ["A Planet", "A Star", "A Moon", "An Asteroid"],
+                "correct": 0
+            }
+        ]
 
     def get_new_question(self):
-        available_questions = [q for q in self.questions[self.planet_name] 
-                             if q not in self.used_questions]
-        if not available_questions:  # If all questions have been used, reset
-            self.used_questions = []
-            available_questions = self.questions[self.planet_name]
-        
-        self.current_question = choice(available_questions)
-        self.used_questions.append(self.current_question)
+        try:
+            available_questions = [q for q in self.questions if q not in self.used_questions]
+            if not available_questions:
+                self.used_questions = []
+                available_questions = self.questions
+            
+            self.current_question = choice(available_questions)
+            self.used_questions.append(self.current_question)
+            
+            # Randomize answers
+            answers = self.current_question['answers'].copy()
+            correct_answer = answers[self.current_question['correct']]
+            shuffle(answers)
+            self.current_question['correct'] = answers.index(correct_answer)
+            self.current_question['answers'] = answers
+        except Exception as e:
+            print(f"Error getting new question: {e}")
+            self.current_question = {
+                "question": "Error loading question",
+                "answers": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                "correct": 0
+            }
+
+    def create_success_particles(self, x, y):
+        # Create 30 particles at the rocket's position
+        for _ in range(30):
+            angle = random() * 2 * math.pi
+            speed = random() * 5 + 2
+            self.particles.append({
+                'x': x,
+                'y': y,
+                'dx': math.cos(angle) * speed,
+                'dy': math.sin(angle) * speed,
+                'life': 60,  # Particle lifetime in frames
+                'color': choice(self.particle_colors),
+                'size': random() * 3 + 1
+            })
+
+    def update_particles(self):
+        # Update particle positions and lifetimes
+        for particle in self.particles[:]:
+            particle['x'] += particle['dx']
+            particle['y'] += particle['dy']
+            particle['life'] -= 1
+            if particle['life'] <= 0:
+                self.particles.remove(particle)
+
+    def draw_particles(self, screen):
+        # Draw all active particles
+        for particle in self.particles:
+            alpha = int((particle['life'] / 60) * 255)
+            color = (*particle['color'], alpha)
+            
+            # Create particle surface with glow effect
+            size = int(particle['size'] * 4)
+            particle_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            
+            # Draw glowing circle
+            for radius in range(int(size//2), 0, -1):
+                glow_alpha = int(alpha * (radius / (size//2)))
+                pygame.draw.circle(
+                    particle_surf,
+                    (*particle['color'], glow_alpha),
+                    (size//2, size//2),
+                    radius
+                )
+            
+            screen.blit(
+                particle_surf,
+                (int(particle['x'] - size//2), int(particle['y'] - size//2))
+            )
 
     def check_answer(self, rocket_rect):
         if self.result is not None:
             if self.result_timer <= 0:
-                if self.show_correct_answer:  # If we were showing the correct answer
+                if self.show_correct_answer:
                     self.get_new_question()
                     self.show_correct_answer = False
-                else:  # If answer was wrong and we haven't shown correct answer yet
+                else:
                     self.show_correct_answer = True
-                    self.result_timer = 180  # Show correct answer for 3 seconds
-                self.result = None  # Reset result state
+                    self.result_timer = 180
+                self.result = None
             return None
 
         for i, (key, data) in enumerate(self.options.items()):
             if key != 'back' and rocket_rect.colliderect(data['rect']):
                 if i == self.current_question['correct']:
                     self.result = True
-                    self.result_timer = 60  # Show success message for 1 second
-                    self.get_new_question()  # Immediately get new question
+                    self.result_timer = 60
+                    # Create particle effect at rocket position
+                    self.create_success_particles(rocket_rect.centerx, rocket_rect.centery)
+                    # Add score for correct answer
+                    try:
+                        self.parent.add_score(10, WIDTH//2, HEIGHT//2)
+                    except:
+                        print("Could not add score")
                 else:
                     self.result = False
-                    self.result_timer = 120  # Show wrong answer message for 2 seconds
-                self.rocket_reset_position = True  # Reset position for both correct and wrong answers
+                    self.result_timer = 120
+                    # Subtract score for wrong answer
+                    try:
+                        self.parent.add_score(-5, WIDTH//2, HEIGHT//2)
+                    except:
+                        print("Could not subtract score")
+                self.rocket_reset_position = True
                 return None
             elif key == 'back' and rocket_rect.colliderect(data['rect']):
                 return 'back'
@@ -1163,12 +1685,26 @@ class QuizScreen:
 
 class SpaceExplorer:
     def __init__(self):
+        # Add fullscreen tracking
+        self.fullscreen = False
+        self.window_size = (WIDTH, HEIGHT)
+        
+        # Initialize display
+        self.screen = pygame.display.set_mode(self.window_size)
+        pygame.display.set_caption("Space Explorer")
+        
+        # Update all fonts to Courier
+        self.font = pygame.font.SysFont('courier', 24)
+        self.large_font = pygame.font.SysFont('courier', 36)
+        self.menu_font = pygame.font.SysFont('courier', 74)
+        self.score_font = pygame.font.SysFont('courier', 48)
+        self.popup_font = pygame.font.SysFont('courier', 36)
+        
+        # Rest of your initialization code...
         self.planets = [Planet(name, data) for name, data in planets.items() if name != "Sun"]
         self.stars = [Star() for _ in range(200)]
         self.rocket = Rocket()
         self.asteroids = []
-        self.font = pygame.font.Font(None, 24)
-        self.large_font = pygame.font.Font(None, 36)
         self.current_info_screen = None
         self.current_quiz_screen = None
         self.cooldown = 0
@@ -1198,7 +1734,6 @@ class SpaceExplorer:
         
         # Add menu state and font
         self.in_menu = True
-        self.menu_font = pygame.font.Font(None, 74)
         self.menu_alpha = 0
         self.alpha_direction = 1
         
@@ -1245,35 +1780,107 @@ class SpaceExplorer:
                         print(f"Could not load image {file}: {e}")
         self.earth_platformer = None
         self.planet_platformer = None
+        self.score = 0
+        self.score_popups = []  # List of dictionaries containing score popup info
+        
+    def add_score(self, points, x, y):
+        try:
+            # Calculate new score but don't let it go below 0
+            new_score = max(0, self.score + points)
+            
+            # Only show popup if score actually changed
+            if new_score != self.score:
+                # Add a score popup (red for negative, white for positive)
+                color = (255, 100, 100) if points < 0 else (255, 255, 255)
+                self.score_popups.append({
+                    'text': f'{points:+d}',  # Shows + or - sign
+                    'x': x,
+                    'y': y,
+                    'alpha': 255,
+                    'lifetime': 60,
+                    'color': color
+                })
+            
+            self.score = new_score
+        except Exception as e:
+            print(f"Error adding score: {e}")
+
+    def update_score_popups(self):
+        # Update existing popups
+        for popup in self.score_popups[:]:
+            popup['y'] -= 1  # Move up
+            popup['alpha'] = max(0, popup['alpha'] - (255 / popup['lifetime']))  # Prevent negative alpha
+            popup['lifetime'] -= 1
+            if popup['lifetime'] <= 0:
+                self.score_popups.remove(popup)
+
+    def draw_score(self, screen):
+        # Draw main score counter
+        score_text = f"Score: {self.score}"
+        score_surface = self.score_font.render(score_text, True, WHITE)
+        score_rect = score_surface.get_rect(midtop=(WIDTH // 2, 10))
+        
+        # Add glow effect to score
+        glow_surface = pygame.Surface((score_rect.width + 4, score_rect.height + 4), pygame.SRCALPHA)
+        for offset in range(3):
+            glow_alpha = max(0, 100 - offset * 30)  # Prevent negative alpha
+            glow_text = self.score_font.render(score_text, True, (255, 255, 255, glow_alpha))
+            glow_rect = glow_text.get_rect(center=(glow_surface.get_width()//2, glow_surface.get_height()//2))
+            glow_surface.blit(glow_text, glow_rect)
+        
+        screen.blit(glow_surface, (score_rect.x - 2, score_rect.y - 2))
+        screen.blit(score_surface, score_rect)
+        
+        # Draw score popups with colors
+        for popup in self.score_popups:
+            alpha = max(0, min(255, int(popup['alpha'])))  # Clamp alpha between 0 and 255
+            color = (*popup['color'][:3], alpha)  # Use stored color with calculated alpha
+            popup_surface = self.popup_font.render(popup['text'], True, color)
+            popup_rect = popup_surface.get_rect(center=(popup['x'], popup['y']))
+            screen.blit(popup_surface, popup_rect)
 
     def reset_rocket_position(self):
         if not self.planet_view:
-            # Position rocket in the upper middle of the solar system screen
-            self.rocket.x = WIDTH // 2
-            self.rocket.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
+            # Position rocket in the top left of the solar system screen
+            self.rocket.x = 100
+            self.rocket.y = 100
         else:
             if self.current_quiz_screen:
-                # Position rocket in the upper middle for quiz
+                # Position rocket in the middle for quiz
                 self.rocket.x = WIDTH // 2
-                self.rocket.y = HEIGHT // 4  # Changed from HEIGHT // 2 to HEIGHT // 4
+                self.rocket.y = HEIGHT * 3 // 4  # Changed from HEIGHT // 4 to HEIGHT * 3 // 4
             else:
                 # Position rocket on the planet screen
                 self.rocket.x = WIDTH // 2
-                self.rocket.y = HEIGHT // 4  # Changed from HEIGHT - 100 to HEIGHT // 4
+                self.rocket.y = HEIGHT // 4
         self.rocket.speed = 0
         self.cooldown = 30
 
     def check_collisions(self):
         if not self.planet_view:
-            # First check collision with Sun (changed radius from 60 to 40)
+            # Check collision with comets
+            for comet in self.comets[:]:
+                try:
+                    distance = math.sqrt(
+                        (self.rocket.x - comet.x)**2 + 
+                        (self.rocket.y - comet.y)**2
+                    )
+                    if distance < self.rocket.size + comet.size:
+                        self.comets.remove(comet)
+                        self.add_score(1, comet.x, comet.y)
+                        return None
+                except Exception as e:
+                    print(f"Error in comet collision: {e}")
+                    continue
+
+            # Existing planet collision checks
             distance_to_sun = math.sqrt(
                 (self.rocket.x - WIDTH//2)**2 + 
                 (self.rocket.y - HEIGHT//2)**2
             )
-            if distance_to_sun < 40 + self.rocket.size:  # Changed from 60 to 40
+            if distance_to_sun < 40 + self.rocket.size:
                 return Planet("Sun", planets["Sun"])
             
-            # Then check other planets
             for planet in self.planets:
                 distance = math.sqrt(
                     (self.rocket.x - planet.x)**2 + 
@@ -1605,7 +2212,19 @@ class SpaceExplorer:
             self.current_image_index = (self.current_image_index - 1) % len(self.history_images)
             self.rocket.x = WIDTH - 51
 
+    def toggle_fullscreen(self):
+        self.fullscreen = not self.fullscreen
+        if self.fullscreen:
+            # Store the window size before going fullscreen
+            self.window_size = self.screen.get_size()
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            # Return to windowed mode with previous size
+            self.screen = pygame.display.set_mode(self.window_size)
+
     def run(self):
+        pygame.init()
+        
         clock = pygame.time.Clock()
         
         while True:
@@ -1613,6 +2232,21 @@ class SpaceExplorer:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    # Add fullscreen toggle controls
+                    if event.key == pygame.K_F11 or (event.key == pygame.K_RETURN and event.mod & pygame.KMOD_ALT):
+                        self.toggle_fullscreen()
+                    elif event.key == pygame.K_ESCAPE:
+                        if self.in_dev_mode:
+                            self.in_dev_mode = False
+                            self.in_menu = True
+                        elif self.current_info_screen:
+                            self.current_info_screen = None
+                        elif self.planet_view:
+                            self.exit_planet_view()
+                        elif not self.in_menu:  # If in solar system view
+                            self.in_menu = True
+                            self.reset_rocket_position()
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
                         if self.in_menu:
@@ -1624,18 +2258,6 @@ class SpaceExplorer:
                                 self.in_dev_mode = True
                                 self.rocket.x = WIDTH // 2
                                 self.rocket.y = HEIGHT // 2
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        if self.in_dev_mode:
-                            self.in_dev_mode = False
-                            self.in_menu = True
-                        elif self.current_info_screen:
-                            self.current_info_screen = None
-                        elif self.planet_view:
-                            self.exit_planet_view()
-                        elif not self.in_menu:  # If in solar system view
-                            self.in_menu = True
-                            self.reset_rocket_position()
 
             # Update space objects for all game states except menu
             if not self.in_menu:
@@ -1646,20 +2268,20 @@ class SpaceExplorer:
                 mouse_pos = pygame.mouse.get_pos()
                 self.launch_button['hover'] = self.launch_button['rect'].collidepoint(mouse_pos)
                 self.dev_button['hover'] = self.dev_button['rect'].collidepoint(mouse_pos)
-                self.draw_menu(screen)
+                self.draw_menu(self.screen)
             elif self.in_dev_mode:
                 keys = pygame.key.get_pressed()
                 self.rocket.update(keys)
-                self.draw_dev_mode(screen)
+                self.draw_dev_mode(self.screen)
             elif self.current_info_screen:
-                self.current_info_screen.draw(screen)
+                self.current_info_screen.draw(self.screen)
                 # Draw space objects in info screen
                 for comet in self.comets:
-                    comet.draw(screen)
+                    comet.draw(self.screen)
                 for asteroid in self.asteroids:
-                    asteroid.draw(screen)
+                    asteroid.draw(self.screen)
             elif self.current_quiz_screen:
-                self.current_quiz_screen.draw(screen, self.rocket)
+                self.current_quiz_screen.draw(self.screen, self.rocket)
                 
                 if self.current_quiz_screen.rocket_reset_position:
                     self.current_quiz_screen.reset_rocket(self.rocket)
@@ -1669,9 +2291,9 @@ class SpaceExplorer:
                 
                 # Draw space objects
                 for comet in self.comets:
-                    comet.draw(screen)
+                    comet.draw(self.screen)
                 for asteroid in self.asteroids:
-                    asteroid.draw(screen)
+                    asteroid.draw(self.screen)
                 
                 rocket_rect = pygame.Rect(self.rocket.x - self.rocket.size, 
                                         self.rocket.y - self.rocket.size,
@@ -1682,7 +2304,7 @@ class SpaceExplorer:
                     self.current_quiz_screen = None
                     self.reset_rocket_position()
                 
-                self.rocket.draw(screen)
+                self.rocket.draw(self.screen)
             elif self.earth_platformer:
                 # Run the Earth platformer game
                 continue_space = self.earth_platformer.run()
@@ -1721,26 +2343,30 @@ class SpaceExplorer:
                                 )
                             self.reset_rocket_position()
                         elif option_hit == 'quiz':
-                            self.current_quiz_screen = QuizScreen(self.current_planet.name)
-                            self.reset_rocket_position()
+                            try:
+                                self.current_quiz_screen = QuizScreen(self.current_planet.name, self)
+                                self.reset_rocket_position()
+                            except Exception as e:
+                                print(f"Error creating quiz screen: {e}")
+                                self.current_quiz_screen = None
                         elif option_hit == 'back':
                             self.exit_planet_view()
 
-                screen.fill(BLACK)
+                self.screen.fill(BLACK)
                 
                 if not self.planet_view:
                     for star in self.stars:
                         star.update()
-                        star.draw(screen)
+                        star.draw(self.screen)
                     self.draw_sun()
                     for planet in self.planets:
                         planet.update()
-                        planet.draw(screen)
+                        planet.draw(self.screen)
                     # Draw comets and asteroids after planets
                     for comet in self.comets:
-                        comet.draw(screen)
+                        comet.draw(self.screen)
                     for asteroid in self.asteroids:
-                        asteroid.draw(screen)
+                        asteroid.draw(self.screen)
                 
                     # Add escape text in corner with glow effect
                     escape_text = "press escape to go back to menu"
@@ -1756,24 +2382,30 @@ class SpaceExplorer:
                         glow_rect = glow_text.get_rect(center=(glow_surface.get_width()//2, glow_surface.get_height()//2))
                         glow_surface.blit(glow_text, glow_rect)
                     
-                    screen.blit(glow_surface, (text_rect.x - 2, text_rect.y - 2))
-                    screen.blit(text_surface, text_rect)
+                    self.screen.blit(glow_surface, (text_rect.x - 2, text_rect.y - 2))
+                    self.screen.blit(text_surface, text_rect)
                 else:
-                    self.draw_planet_screen(screen)
+                    self.draw_planet_screen(self.screen)
 
-                self.rocket.draw(screen)
+                self.rocket.draw(self.screen)
 
                 if self.transition_alpha > 0:
                     fade_surface = pygame.Surface((WIDTH, HEIGHT))
                     fade_surface.fill(BLACK)
                     fade_surface.set_alpha(self.transition_alpha)
-                    screen.blit(fade_surface, (0, 0))
+                    self.screen.blit(fade_surface, (0, 0))
                     
                     if self.planet_view:
                         self.transition_alpha = max(0, self.transition_alpha - 10)
                     else:
                         self.transition_alpha = max(0, self.transition_alpha - 10)
 
+            # Update score popups
+            self.update_score_popups()
+            
+            # Draw score (add this before pygame.display.flip())
+            self.draw_score(self.screen)
+            
             pygame.display.flip()
             clock.tick(60)
 
