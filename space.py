@@ -723,9 +723,14 @@ class InfoScreen:
     def __init__(self, planet_name, info):
         self.planet_name = planet_name
         self.info = info
-        # Update fonts to Courier
-        self.font_title = pygame.font.SysFont('courier', 48)
-        self.font_info = pygame.font.SysFont('courier', 36)
+        try:
+            font_path = os.path.join("fonts", "PressStart2P-Regular.ttf")
+            self.font_title = pygame.font.Font(font_path, 32)
+            self.font_info = pygame.font.Font(font_path, 16)
+        except:
+            print("Could not load custom font for InfoScreen, falling back to system font")
+            self.font_title = pygame.font.SysFont('courier', 48)
+            self.font_info = pygame.font.SysFont('courier', 36)
 
     def draw(self, screen):
         screen.fill(BLACK)
@@ -746,8 +751,12 @@ class InfoScreen:
 class QuizScreen:
     def __init__(self, planet_name, parent):
         self.parent = parent
-        # Update font to Courier
-        self.font = pygame.font.SysFont('courier', 36)
+        try:
+            font_path = os.path.join("fonts", "PressStart2P-Regular.ttf")
+            self.font = pygame.font.Font(font_path, 16)
+        except:
+            print("Could not load custom font for QuizScreen, falling back to system font")
+            self.font = pygame.font.SysFont('courier', 36)
         self.planet_name = planet_name
         self.show_correct_answer = False
         
@@ -1693,12 +1702,21 @@ class SpaceExplorer:
         self.screen = pygame.display.set_mode(self.window_size)
         pygame.display.set_caption("Space Explorer")
         
-        # Update all fonts to Courier
-        self.font = pygame.font.SysFont('courier', 24)
-        self.large_font = pygame.font.SysFont('courier', 36)
-        self.menu_font = pygame.font.SysFont('courier', 74)
-        self.score_font = pygame.font.SysFont('courier', 48)
-        self.popup_font = pygame.font.SysFont('courier', 36)
+        # Load custom pixel font
+        try:
+            font_path = os.path.join("fonts", "PressStart2P-Regular.ttf")
+            self.font = pygame.font.Font(font_path, 16)  # Smaller size for regular text
+            self.large_font = pygame.font.Font(font_path, 24)  # Medium size
+            self.menu_font = pygame.font.Font(font_path, 48)  # Large size for menu
+            self.score_font = pygame.font.Font(font_path, 32)  # Size for score
+            self.popup_font = pygame.font.Font(font_path, 24)  # Size for popups
+        except:
+            print("Could not load custom font, falling back to system font")
+            self.font = pygame.font.SysFont('courier', 24)
+            self.large_font = pygame.font.SysFont('courier', 36)
+            self.menu_font = pygame.font.SysFont('courier', 74)
+            self.score_font = pygame.font.SysFont('courier', 48)
+            self.popup_font = pygame.font.SysFont('courier', 36)
         
         # Rest of your initialization code...
         self.planets = [Planet(name, data) for name, data in planets.items() if name != "Sun"]
