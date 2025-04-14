@@ -808,12 +808,30 @@ class QuizScreen:
 
     def get_new_question(self):
         try:
+            print("\nGetting new question...")
+            print(f"Current question: {self.current_question['question'] if self.current_question else 'None'}")
+            
+            # Get questions that haven't been used yet
             available_questions = [q for q in self.questions if q not in self.used_questions]
+            print(f"Available questions: {len(available_questions)}")
+            
+            # If we've used all questions, reset the used questions list
             if not available_questions:
+                print("Resetting question pool")
                 self.used_questions = []
                 available_questions = self.questions
             
-            self.current_question = choice(available_questions)
+            # Select a new question that's different from the current one
+            new_question = None
+            attempts = 0
+            while new_question is None or (self.current_question and new_question == self.current_question):
+                new_question = choice(available_questions)
+                attempts += 1
+                if attempts > 10:  # Safeguard against infinite loop
+                    print("Warning: Many attempts to find different question")
+                    break
+            
+            self.current_question = new_question
             self.used_questions.append(self.current_question)
             
             # Randomize answers
@@ -822,6 +840,9 @@ class QuizScreen:
             shuffle(answers)
             self.current_question['correct'] = answers.index(correct_answer)
             self.current_question['answers'] = answers
+            
+            print(f"New question selected: {self.current_question['question']}")
+            
         except Exception as e:
             print(f"Error getting new question: {e}")
             self.current_question = {
@@ -833,8 +854,7 @@ class QuizScreen:
     def check_answer(self, rocket_rect):
         if self.result is not None:
             if self.result_timer <= 0:
-                if self.show_correct_answer:
-                    self.show_correct_answer = False
+                self.show_correct_answer = False
                 self.result = None
                 return None
 
@@ -850,14 +870,14 @@ class QuizScreen:
                         print("Could not add score")
                     pygame.time.set_timer(pygame.USEREVENT + 1, 1500)
                     
-                    if not self.question_changed:
-                        self.question_changed = True
-                        self.get_new_question()
+                    # Change question immediately after correct answer
+                    print("Correct answer! Getting new question immediately")
+                    self.get_new_question()
                 else:
                     self.result = False
                     self.result_timer = 120
                     self.current_animation = 'idle'
-                    self.question_changed = False
+                    print("Wrong answer")
                 self.rocket_reset_position = True
                 return None
             elif key == 'back' and rocket_rect.colliderect(data['rect']):
@@ -956,6 +976,51 @@ class QuizScreen:
                     "question": "What powers the Sun?",
                     "answers": ["Chemical reactions", "Nuclear fusion", "Nuclear fission", "Gravitational compression"],
                     "correct": 1
+                },
+                {
+                    "question": "How old is the Sun?",
+                    "answers": ["2.3 billion years", "4.6 billion years", "6.1 billion years", "8.2 billion years"],
+                    "correct": 1
+                },
+                {
+                    "question": "What type of star is the Sun?",
+                    "answers": ["Red Giant", "White Dwarf", "Yellow Dwarf", "Blue Giant"],
+                    "correct": 2
+                },
+                {
+                    "question": "What is the main element in the Sun's composition?",
+                    "answers": ["Helium", "Oxygen", "Carbon", "Hydrogen"],
+                    "correct": 3
+                },
+                {
+                    "question": "What happens in the Sun's core?",
+                    "answers": ["Nuclear fusion", "Nuclear fission", "Chemical burning", "Electrical discharge"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's role in the solar system?",
+                    "answers": ["Just a light source", "Center of gravity", "Both gravity center and energy source", "Only heat provider"],
+                    "correct": 2
+                },
+                {
+                    "question": "What causes solar flares?",
+                    "answers": ["Magnetic field disruptions", "Chemical explosions", "Surface earthquakes", "Asteroid impacts"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the Sun's corona?",
+                    "answers": ["Its atmosphere", "Its surface", "Its core", "Its magnetic field"],
+                    "correct": 0
+                },
+                {
+                    "question": "How does the Sun affect Earth's climate?",
+                    "answers": ["Through radiation", "Through gravity", "Through magnetic fields", "All of the above"],
+                    "correct": 3
+                },
+                {
+                    "question": "What is solar wind?",
+                    "answers": ["Stream of charged particles", "Strong breeze", "Light waves", "Radio waves"],
+                    "correct": 0
                 }
             ]
         elif planet_name == "Mercury":
@@ -969,6 +1034,56 @@ class QuizScreen:
                     "question": "Mercury's core makes up about what percentage of its volume?",
                     "answers": ["25%", "40%", "55%", "70%"],
                     "correct": 2
+                },
+                {
+                    "question": "What is Mercury's surface primarily composed of?",
+                    "answers": ["Ice", "Rock", "Metal", "Gas"],
+                    "correct": 1
+                },
+                {
+                    "question": "What is the main component of Mercury's thin exosphere?",
+                    "answers": ["Oxygen", "Hydrogen", "Helium", "Carbon dioxide"],
+                    "correct": 0
+                },
+                {
+                    "question": "How strong is Mercury's magnetic field compared to Earth's?",
+                    "answers": ["About 1%", "About 10%", "About 50%", "About 100%"],
+                    "correct": 0
+                },
+                {
+                    "question": "What are Mercury's surface features similar to?",
+                    "answers": ["Earth's oceans", "Mars' valleys", "Earth's Moon", "Venus' plains"],
+                    "correct": 2
+                },
+                {
+                    "question": "What is a prominent surface feature on Mercury?",
+                    "answers": ["Scarps", "Oceans", "Volcanoes", "Ice caps"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many Earth days does it take Mercury to orbit the Sun?",
+                    "answers": ["88", "225", "365", "687"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Mercury's orbit?",
+                    "answers": ["Most circular", "Most elliptical", "Fastest speed", "Slowest speed"],
+                    "correct": 1
+                },
+                {
+                    "question": "Why does Mercury have no atmosphere?",
+                    "answers": ["Too hot", "Too small", "Both hot and small", "Too far from Sun"],
+                    "correct": 2
+                },
+                {
+                    "question": "What time of day is hottest on Mercury?",
+                    "answers": ["Noon", "Afternoon", "Morning", "No difference"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Mercury's wrinkled appearance?",
+                    "answers": ["Cooling and shrinking", "Volcanic activity", "Meteor impacts", "Solar radiation"],
+                    "correct": 0
                 }
             ]
         elif planet_name == "Venus":
@@ -982,6 +1097,56 @@ class QuizScreen:
                     "question": "Venus rotates in which direction?",
                     "answers": ["Same as Earth", "Opposite to Earth", "It doesn't rotate", "Perpendicular to its orbit"],
                     "correct": 1
+                },
+                {
+                    "question": "What is Venus's atmosphere primarily composed of?",
+                    "answers": ["Nitrogen", "Oxygen", "Carbon dioxide", "Methane"],
+                    "correct": 2
+                },
+                {
+                    "question": "How does Venus's atmospheric pressure compare to Earth's?",
+                    "answers": ["90 times greater", "Same", "Half as much", "10 times greater"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the surface temperature of Venus?",
+                    "answers": ["462°C", "100°C", "1000°C", "250°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "What type of clouds are found on Venus?",
+                    "answers": ["Water vapor", "Sulfuric acid", "Methane", "Ammonia"],
+                    "correct": 1
+                },
+                {
+                    "question": "How long is a Venusian day?",
+                    "answers": ["243 Earth days", "24 Earth hours", "365 Earth days", "30 Earth days"],
+                    "correct": 0
+                },
+                {
+                    "question": "Why is Venus called Earth's twin?",
+                    "answers": ["Similar size and mass", "Similar atmosphere", "Similar temperature", "Similar rotation"],
+                    "correct": 0
+                },
+                {
+                    "question": "What percentage of Venus has been reshaped by volcanic activity?",
+                    "answers": ["25%", "50%", "75%", "90%"],
+                    "correct": 3
+                },
+                {
+                    "question": "Does Venus have a magnetic field?",
+                    "answers": ["No", "Yes, strong", "Yes, weak", "Yes, variable"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many moons does Venus have?",
+                    "answers": ["None", "One", "Two", "Three"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Venus's bright appearance from Earth?",
+                    "answers": ["Reflective clouds", "Surface ice", "Volcanic activity", "Solar proximity"],
+                    "correct": 0
                 }
             ]
         elif planet_name == "Earth":
@@ -995,6 +1160,56 @@ class QuizScreen:
                     "question": "What percentage of Earth is covered by oceans?",
                     "answers": ["50%", "60%", "70%", "80%"],
                     "correct": 2
+                },
+                {
+                    "question": "What is Earth's core temperature?",
+                    "answers": ["1,000°C", "3,200°C", "5,400°C", "8,000°C"],
+                    "correct": 2
+                },
+                {
+                    "question": "What causes Earth's seasons?",
+                    "answers": ["Distance from Sun", "23.5-degree tilt", "Rotation speed", "Ocean currents"],
+                    "correct": 1
+                },
+                {
+                    "question": "What is Earth's average gravity?",
+                    "answers": ["8.2 m/s²", "9.8 m/s²", "10.5 m/s²", "11.2 m/s²"],
+                    "correct": 1
+                },
+                {
+                    "question": "What percentage of Earth's atmosphere is oxygen?",
+                    "answers": ["10%", "21%", "35%", "50%"],
+                    "correct": 1
+                },
+                {
+                    "question": "What protects Earth from harmful UV radiation?",
+                    "answers": ["Ozone layer", "Atmosphere", "Magnetic field", "Clouds"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long does Earth take to rotate once?",
+                    "answers": ["23 hours", "24 hours", "25 hours", "26 hours"],
+                    "correct": 1
+                },
+                {
+                    "question": "What is unique about Earth in our solar system?",
+                    "answers": ["Has water", "Has life", "Has atmosphere", "Has liquid water and life"],
+                    "correct": 3
+                },
+                {
+                    "question": "What causes Earth's magnetic field?",
+                    "answers": ["Core rotation", "Solar wind", "Moon's gravity", "Atmospheric pressure"],
+                    "correct": 0
+                },
+                {
+                    "question": "How old is Earth?",
+                    "answers": ["4.54 billion years", "3.21 billion years", "5.67 billion years", "2.89 billion years"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is the main cause of ocean tides?",
+                    "answers": ["Moon's gravity", "Sun's heat", "Earth's rotation", "Wind patterns"],
+                    "correct": 0
                 }
             ]
         elif planet_name == "Mars":
@@ -1008,6 +1223,56 @@ class QuizScreen:
                     "question": "What is the name of the largest volcano on Mars?",
                     "answers": ["Mount Everest", "Olympus Mons", "Tharsis Montes", "Elysium Mons"],
                     "correct": 1
+                },
+                {
+                    "question": "What is Mars' atmosphere primarily composed of?",
+                    "answers": ["Nitrogen", "Oxygen", "Carbon dioxide", "Hydrogen"],
+                    "correct": 2
+                },
+                {
+                    "question": "How many moons does Mars have?",
+                    "answers": ["None", "One", "Two", "Three"],
+                    "correct": 2
+                },
+                {
+                    "question": "What is the name of Mars' largest canyon?",
+                    "answers": ["Valles Marineris", "Grand Canyon", "Olympus Valley", "Hellas Basin"],
+                    "correct": 0
+                },
+                {
+                    "question": "What evidence suggests Mars once had water?",
+                    "answers": ["River valleys", "Ocean beds", "Mineral deposits", "All of these"],
+                    "correct": 3
+                },
+                {
+                    "question": "What are Mars' moons called?",
+                    "answers": ["Phobos and Deimos", "Titan and Europa", "Io and Ganymede", "Luna and Charon"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Mars' dust storms?",
+                    "answers": ["Solar winds", "Temperature differences", "Low gravity", "All of these"],
+                    "correct": 1
+                },
+                {
+                    "question": "What is the average temperature on Mars?",
+                    "answers": ["-63°C", "-23°C", "0°C", "23°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "Why can't liquid water exist on Mars' surface?",
+                    "answers": ["Too cold", "Low pressure", "Both cold and low pressure", "Too much salt"],
+                    "correct": 2
+                },
+                {
+                    "question": "What type of ice exists on Mars' poles?",
+                    "answers": ["Water ice", "Carbon dioxide ice", "Both", "Neither"],
+                    "correct": 2
+                },
+                {
+                    "question": "How strong is Mars' gravity compared to Earth's?",
+                    "answers": ["About 38%", "About 50%", "About 75%", "About 90%"],
+                    "correct": 0
                 }
             ]
         elif planet_name == "Jupiter":
@@ -1021,6 +1286,56 @@ class QuizScreen:
                     "question": "What is Jupiter's most famous feature?",
                     "answers": ["Great Red Spot", "Ring system", "Magnetic field", "Moons"],
                     "correct": 0
+                },
+                {
+                    "question": "How many known moons does Jupiter have?",
+                    "answers": ["16", "45", "79", "95"],
+                    "correct": 2
+                },
+                {
+                    "question": "How strong is Jupiter's magnetic field compared to Earth's?",
+                    "answers": ["5 times", "14 times", "20 times", "30 times"],
+                    "correct": 1
+                },
+                {
+                    "question": "What causes Jupiter's bands of clouds?",
+                    "answers": ["Wind patterns", "Temperature differences", "Both", "Neither"],
+                    "correct": 2
+                },
+                {
+                    "question": "How fast are Jupiter's strongest winds?",
+                    "answers": ["250 km/h", "450 km/h", "650 km/h", "850 km/h"],
+                    "correct": 2
+                },
+                {
+                    "question": "Which is Jupiter's largest moon?",
+                    "answers": ["Io", "Europa", "Ganymede", "Callisto"],
+                    "correct": 2
+                },
+                {
+                    "question": "What is the Great Red Spot?",
+                    "answers": ["A volcano", "A storm", "A crater", "An ocean"],
+                    "correct": 1
+                },
+                {
+                    "question": "How long has the Great Red Spot existed?",
+                    "answers": ["100 years", "200 years", "At least 400 years", "1000 years"],
+                    "correct": 2
+                },
+                {
+                    "question": "What gives the Great Red Spot its color?",
+                    "answers": ["Iron oxide", "Unknown compounds", "Methane", "Ammonia"],
+                    "correct": 1
+                },
+                {
+                    "question": "How many Earths could fit inside Jupiter?",
+                    "answers": ["500", "1,000", "1,321", "2,000"],
+                    "correct": 2
+                },
+                {
+                    "question": "What type of planet is Jupiter?",
+                    "answers": ["Rocky planet", "Ice giant", "Gas giant", "Dwarf planet"],
+                    "correct": 2
                 }
             ]
         elif planet_name == "Saturn":
@@ -1034,6 +1349,56 @@ class QuizScreen:
                     "question": "Saturn is the only planet less dense than what?",
                     "answers": ["Jupiter", "Water", "Earth", "Air"],
                     "correct": 1
+                },
+                {
+                    "question": "How many known moons does Saturn have?",
+                    "answers": ["62", "72", "82", "92"],
+                    "correct": 2
+                },
+                {
+                    "question": "Which is Saturn's largest moon?",
+                    "answers": ["Titan", "Enceladus", "Mimas", "Rhea"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is unique about Titan?",
+                    "answers": ["Has atmosphere", "Has liquid surface", "Both", "Neither"],
+                    "correct": 2
+                },
+                {
+                    "question": "How thick are Saturn's rings?",
+                    "answers": ["10 meters", "100 meters", "1 kilometer", "10 kilometers"],
+                    "correct": 0
+                },
+                {
+                    "question": "What causes Saturn's hexagonal storm?",
+                    "answers": ["Magnetic fields", "Jet streams", "Moon gravity", "Unknown"],
+                    "correct": 1
+                },
+                {
+                    "question": "How strong is Saturn's magnetic field compared to Earth's?",
+                    "answers": ["578 times", "100 times", "1000 times", "50 times"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Saturn primarily made of?",
+                    "answers": ["Rock", "Metal", "Hydrogen and helium", "Ice"],
+                    "correct": 2
+                },
+                {
+                    "question": "What gives Saturn its yellowish color?",
+                    "answers": ["Ammonia clouds", "Methane", "Hydrogen", "Helium"],
+                    "correct": 0
+                },
+                {
+                    "question": "How wide are Saturn's rings?",
+                    "answers": ["100,000 km", "180,000 km", "280,000 km", "380,000 km"],
+                    "correct": 2
+                },
+                {
+                    "question": "What is unique about Saturn's density?",
+                    "answers": ["Heaviest planet", "Lightest planet", "Would float in water", "Most dense atmosphere"],
+                    "correct": 2
                 }
             ]
         elif planet_name == "Uranus":
@@ -1047,6 +1412,56 @@ class QuizScreen:
                     "question": "How is Uranus's rotation unusual?",
                     "answers": ["It's very fast", "It's very slow", "It rotates on its side", "It rotates backwards"],
                     "correct": 2
+                },
+                {
+                    "question": "What type of planet is Uranus?",
+                    "answers": ["Gas giant", "Rocky planet", "Ice giant", "Dwarf planet"],
+                    "correct": 2
+                },
+                {
+                    "question": "How many known moons does Uranus have?",
+                    "answers": ["17", "27", "37", "47"],
+                    "correct": 1
+                },
+                {
+                    "question": "What are Uranus's moons named after?",
+                    "answers": ["Greek gods", "Roman gods", "Shakespeare characters", "Scientists"],
+                    "correct": 2
+                },
+                {
+                    "question": "How long is a day on Uranus?",
+                    "answers": ["17 Earth hours", "24 Earth hours", "42 Earth hours", "72 Earth hours"],
+                    "correct": 0
+                },
+                {
+                    "question": "What is Uranus primarily composed of?",
+                    "answers": ["Rock and metal", "Hydrogen and helium", "Water, methane, and ammonia", "All of these"],
+                    "correct": 2
+                },
+                {
+                    "question": "When was Uranus discovered?",
+                    "answers": ["1681", "1781", "1881", "1981"],
+                    "correct": 1
+                },
+                {
+                    "question": "What causes Uranus's extreme seasons?",
+                    "answers": ["Its tilt", "Its distance", "Its speed", "Its moons"],
+                    "correct": 0
+                },
+                {
+                    "question": "How many rings does Uranus have?",
+                    "answers": ["5", "13", "20", "27"],
+                    "correct": 1
+                },
+                {
+                    "question": "What is the average temperature on Uranus?",
+                    "answers": ["-224°C", "-197°C", "-157°C", "-127°C"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is Uranus's year?",
+                    "answers": ["84 Earth years", "165 Earth years", "248 Earth years", "365 Earth years"],
+                    "correct": 0
                 }
             ]
         elif planet_name == "Neptune":
@@ -1059,6 +1474,56 @@ class QuizScreen:
                 {
                     "question": "What is Neptune's largest moon?",
                     "answers": ["Triton", "Titan", "Europa", "Phobos"],
+                    "correct": 0
+                },
+                {
+                    "question": "How fast are Neptune's strongest winds?",
+                    "answers": ["1,200 km/h", "1,600 km/h", "2,100 km/h", "2,500 km/h"],
+                    "correct": 2
+                },
+                {
+                    "question": "What gives Neptune its blue color?",
+                    "answers": ["Water", "Methane", "Nitrogen", "Hydrogen"],
+                    "correct": 1
+                },
+                {
+                    "question": "How many Earth masses is Neptune?",
+                    "answers": ["7", "17", "27", "37"],
+                    "correct": 1
+                },
+                {
+                    "question": "What type of planet is Neptune?",
+                    "answers": ["Rocky planet", "Gas giant", "Ice giant", "Dwarf planet"],
+                    "correct": 2
+                },
+                {
+                    "question": "How many known moons does Neptune have?",
+                    "answers": ["8", "14", "27", "31"],
+                    "correct": 1
+                },
+                {
+                    "question": "What is unusual about Triton's orbit?",
+                    "answers": ["Very fast", "Backwards", "Very slow", "Irregular shape"],
+                    "correct": 1
+                },
+                {
+                    "question": "What was the Great Dark Spot?",
+                    "answers": ["A crater", "A storm", "An ocean", "A moon shadow"],
+                    "correct": 1
+                },
+                {
+                    "question": "How was Neptune discovered?",
+                    "answers": ["Visual observation", "Mathematical prediction", "Radio signals", "Telescope accident"],
+                    "correct": 1
+                },
+                {
+                    "question": "What percentage of Neptune is ice?",
+                    "answers": ["10-15%", "15-20%", "20-25%", "25-30%"],
+                    "correct": 0
+                },
+                {
+                    "question": "How long is Neptune's year?",
+                    "answers": ["165 Earth years", "248 Earth years", "165 Earth years", "84 Earth years"],
                     "correct": 0
                 }
             ]

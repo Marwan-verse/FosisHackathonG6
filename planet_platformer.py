@@ -720,22 +720,24 @@ class Player(pygame.sprite.Sprite):
         self.fallback_frame = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         pygame.draw.rect(self.fallback_frame, (255, 0, 0), self.fallback_frame.get_rect())
         
-        # Initialize animations with fallback frame
+        # Load all animations
         self.animations = {
-            'idle': [self.fallback_frame],
-            'running': [self.fallback_frame],
-            'jumping': [self.fallback_frame]
+            'idle': [],
+            'running': [],
+            'jumping': []
         }
+        self.load_all_animations()
+        
         self.current_animation = 'idle'
         self.current_frame_index = 0
         self.animation_timer = 0
-        self.animation_speed = 10  # Slowed down animation speed
+        self.animation_speed = 10  # Frames between animation updates
         self.animation_state = 'idle'
         
-        self.image = self.animations['idle'][0]  # Set the initial image
-        
-        # Ensure we always have a valid fallback
-        if not isinstance(self.image, pygame.Surface):
+        # Set initial image
+        if self.animations['idle']:
+            self.image = self.animations['idle'][0]
+        else:
             self.image = self.fallback_frame
         
         self.rect = self.image.get_rect()
@@ -755,24 +757,67 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
     
     def load_all_animations(self):
-        # Remove loading of animations from files
-        self.animations['idle'] = [self.fallback_frame]
-        self.animations['running'] = [self.fallback_frame]
-        self.animations['jumping'] = [self.fallback_frame]
+        try:
+            # Load idle animation
+            idle_path = os.path.join('assets', 'animations', 'idle', 'IdleFrame1.png')
+            if os.path.exists(idle_path):
+                idle_frame = pygame.image.load(idle_path).convert_alpha()
+                idle_frame = pygame.transform.scale(idle_frame, (self.width, self.height))
+                self.animations['idle'] = [idle_frame]
+            
+            # Load running animation
+            running_frames = []
+            for i in range(1, 9):  # 8 running frames
+                frame_path = os.path.join('assets', 'animations', 'running', f'runningFrame{i}.png')
+                if os.path.exists(frame_path):
+                    frame = pygame.image.load(frame_path).convert_alpha()
+                    frame = pygame.transform.scale(frame, (self.width, self.height))
+                    running_frames.append(frame)
+            if running_frames:
+                self.animations['running'] = running_frames
+            
+            # Load jumping animation
+            jump_path = os.path.join('assets', 'animations', 'jumping', 'jumpingFrame1.png')
+            if os.path.exists(jump_path):
+                jump_frame = pygame.image.load(jump_path).convert_alpha()
+                jump_frame = pygame.transform.scale(jump_frame, (self.width, self.height))
+                self.animations['jumping'] = [jump_frame]
+            
+            # Set fallback frames for any missing animations
+            if not self.animations['idle']:
+                self.animations['idle'] = [self.fallback_frame]
+            if not self.animations['running']:
+                self.animations['running'] = [self.fallback_frame]
+            if not self.animations['jumping']:
+                self.animations['jumping'] = [self.fallback_frame]
+                
+        except Exception as e:
+            print(f"Error loading animations: {e}")
+            # Set fallback frames for all animations
+            self.animations['idle'] = [self.fallback_frame]
+            self.animations['running'] = [self.fallback_frame]
+            self.animations['jumping'] = [self.fallback_frame]
 
     def update(self):
         # Get keyboard state
         keys = pygame.key.get_pressed()
 
+        # Track previous state to avoid unnecessary animation changes
+        previous_animation = self.current_animation
+        was_jumping = self.is_jumping
+
         # Horizontal movement
+        moving = False
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.rect.x -= self.speed
             self.change_x = -self.speed
             self.facing_right = False
+            moving = True
         elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.rect.x += self.speed
             self.change_x = self.speed
             self.facing_right = True
+            moving = True
         else:
             self.change_x = 0
 
@@ -791,15 +836,23 @@ class Player(pygame.sprite.Sprite):
         platform_hit_list = pygame.sprite.spritecollide(self, self.platforms, False)
         self.rect.y -= 2
 
+        # Update ground state and handle landing
         if platform_hit_list:
             self.on_ground = True
-            self.is_jumping = False
-            # Set player on top of the platform
-            if self.velocity_y > 0:
+            if self.velocity_y > 0:  # Landing
                 self.rect.bottom = platform_hit_list[0].rect.top
                 self.velocity_y = 0
+                self.is_jumping = False
         else:
             self.on_ground = False
+
+        # Update animation state
+        if self.is_jumping:
+            self.current_animation = 'jumping'
+        elif moving:
+            self.current_animation = 'running'
+        else:
+            self.current_animation = 'idle'
 
         # Keep player in bounds
         if self.rect.left < 0:
@@ -811,40 +864,28 @@ class Player(pygame.sprite.Sprite):
         if self.rect.bottom > WORLD_HEIGHT:
             self.rect.bottom = WORLD_HEIGHT
 
-        # Update animation state with safety checks
+        # Update animation frame only if we have valid frames
         try:
-            if self.is_jumping:
-                self.current_animation = 'jumping'
-            elif self.change_x != 0:
-                self.current_animation = 'running'
+            current_frames = self.animations[self.current_animation]
+            if current_frames:  # Only proceed if we have frames
+                self.animation_timer += 1
+                if self.animation_timer >= self.animation_speed:
+                    self.animation_timer = 0
+                    self.current_frame_index = (self.current_frame_index + 1) % len(current_frames)
+                
+                # Get current frame and ensure it's within bounds
+                frame_index = min(self.current_frame_index, len(current_frames) - 1)
+                current_frame = current_frames[frame_index]
+                
+                # Flip the frame if facing left
+                if not self.facing_right:
+                    self.image = pygame.transform.flip(current_frame, True, False)
+                else:
+                    self.image = current_frame
             else:
-                self.current_animation = 'idle'
-
-            # Safely get the current animation frames
-            current_frames = self.animations.get(self.current_animation, [self.fallback_frame])
-            if not current_frames:
-                current_frames = [self.fallback_frame]
-
-            # Update animation frame
-            self.animation_timer += self.animation_speed
-            if self.animation_timer >= 1:
-                self.animation_timer = 0
-                self.current_frame_index = (self.current_frame_index + 1) % len(current_frames)
-
-            # Safely get current frame
-            current_frame = current_frames[min(self.current_frame_index, len(current_frames) - 1)]
-
-            # Update image
-            if not self.facing_right:
-                self.image = pygame.transform.flip(current_frame, True, False)
-            else:
-                self.image = current_frame
-
-            # Validate image is a surface
-            if not isinstance(self.image, pygame.Surface):
-                print(f"Warning: Player image is not a valid surface")
+                # If no frames available for current animation, use fallback
                 self.image = self.fallback_frame
-
+                
         except Exception as e:
             print(f"Animation error: {e}")
             self.image = self.fallback_frame
