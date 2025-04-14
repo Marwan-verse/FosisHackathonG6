@@ -1,3 +1,87 @@
+# Load character animations
+self.animations = {
+    'idle': [],
+    'running': [],
+    'jumping': []
+}
+
+# Load idle animation
+try:
+    idle_dir = os.path.join(ASSETS_DIR, "animations", "idle")
+    if os.path.exists(idle_dir):
+        idle_frame = pygame.image.load(os.path.join(idle_dir, "idleFrame1.png")).convert_alpha()
+        self.animations['idle'].append(idle_frame)
+except Exception as e:
+    print(f"Error loading idle animation: {e}")
+
+# Load running animation
+try:
+    running_dir = os.path.join(ASSETS_DIR, "animations", "running")
+    if os.path.exists(running_dir):
+        for i in range(1, 9):  # There are 8 running frames
+            try:
+                frame = pygame.image.load(os.path.join(running_dir, f"runningFrame{i}.png")).convert_alpha()
+                self.animations['running'].append(frame)
+            except:
+                break
+except Exception as e:
+    print(f"Error loading running animation: {e}")
+
+# Load jumping animation
+try:
+    jumping_dir = os.path.join(ASSETS_DIR, "animations", "jumping")
+    if os.path.exists(jumping_dir):
+        jumping_frame = pygame.image.load(os.path.join(jumping_dir, "jumpingFrame1.png")).convert_alpha()
+        self.animations['jumping'].append(jumping_frame)
+except Exception as e:
+    print(f"Error loading jumping animation: {e}")
+
+# Animation state
+self.current_animation = 'running'
+self.animation_frame = 0
+self.animation_speed = 0.1  # Speed of animation (frames per update)
+self.animation_timer = 0
+self.character_x = 100  # Character position
+self.character_y = HEIGHT - 150
+self.character_scale = 2.0  # Scale factor for the characterdef update_animation(self):
+    # Update animation frame
+    self.animation_timer += self.animation_speed
+    if self.animation_timer >= 1:
+        self.animation_timer = 0
+        if self.current_animation == 'running' and self.animations['running']:
+            self.animation_frame = (self.animation_frame + 1) % len(self.animations['running'])
+        elif self.current_animation == 'jumping':
+            # For jumping, we just use one frame
+            self.animation_frame = 0
+        else:  # idle
+            self.animation_frame = 0# Inside the check_answer method, when setting self.result = True:
+            self.current_animation = 'jumping'  # Jump when correct
+            
+            # When setting self.result = False:
+            self.current_animation = 'idle'  # Idle when wrong# Update animation
+            self.update_animation()
+            
+            # Draw character animation
+            if self.current_animation in self.animations and self.animations[self.current_animation]:
+                # Get the current frame
+                if self.current_animation == 'running':
+                    frame = self.animations['running'][self.animation_frame] if self.animations['running'] else None
+                elif self.current_animation == 'jumping':
+                    frame = self.animations['jumping'][0] if self.animations['jumping'] else None
+                else:  # idle
+                    frame = self.animations['idle'][0] if self.animations['idle'] else None
+                
+                if frame:
+                    # Scale the frame
+                    scaled_frame = pygame.transform.scale(
+                        frame, 
+                        (int(frame.get_width() * self.character_scale), 
+                         int(frame.get_height() * self.character_scale))
+                    )
+                    
+                    # Draw the character
+                    screen.blit(scaled_frame, (self.character_x, self.character_y))# Reset animation to running
+                    self.current_animation = 'running'
 import pygame
 import random
 import os
@@ -18,11 +102,6 @@ PLAYER_HEIGHT = 64
 GRAVITY = 0.8
 JUMP_SPEED = -15
 MOVE_SPEED = 5
-
-# Define world dimensions
-TILE_SIZE = 48  # Assuming each tile is 48x48 pixels
-WORLD_WIDTH = 150 * TILE_SIZE  # Further adjusted to include all buttons
-WORLD_HEIGHT = 80 * TILE_SIZE  # Further adjusted to include all buttons
 
 # Colors
 WHITE = (255, 255, 255)
@@ -299,31 +378,19 @@ class Camera:
         self.width = width
         self.height = height
         self.scroll_speed = MOVE_SPEED
-        self.x = 0
-        self.y = 200  # Move camera up
-        self.smoothness = 0.1  # Smoothing factor for gradual camera movement
+        self.x = 0  # Store actual x position for parallax
 
     def apply(self, entity):
         return entity.rect.move(self.camera.topleft)
 
     def update(self, target):
-        # Calculate target position (centering player)
-        target_x = -target.rect.centerx + SCREEN_WIDTH // 2
-        target_y = -target.rect.centery + SCREEN_HEIGHT + 600 // 2
-
-        # Set world boundaries (adjust these values based on your level size)
-        target_x = min(0, target_x)  # Left boundary
-        target_x = max(-(WORLD_WIDTH - SCREEN_WIDTH), target_x)  # Right boundary
-        target_y = min(0, target_y)  # Top boundary
-        target_y = max(-(WORLD_HEIGHT - SCREEN_HEIGHT), target_y)  # Bottom boundary
-
-        # Smoothly move camera in both x and y directions
-        self.x += (target_x - self.x) * self.smoothness
-        self.y += (target_y - self.y) * self.smoothness
-        self.camera.x = int(self.x)
-        self.camera.y = int(self.y)
-        print(f"Camera target: {target_x}, {target_y}")
-        print(f"Camera position: {self.camera.x}, {self.camera.y}")
+        self.x = -target.rect.centerx + SCREEN_WIDTH // 2
+        
+        # Limit scrolling to world boundaries
+        self.x = min(0, self.x)  # Left boundary
+        self.x = max(-(WORLD_WIDTH - SCREEN_WIDTH), self.x)  # Right boundary
+        
+        self.camera = pygame.Rect(self.x, 0, self.width, self.height)
 
 class InfoButton(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -351,15 +418,13 @@ class InfoButton(pygame.sprite.Sprite):
         self.image = self.button_normal
         self.rect = self.image.get_rect()
         self.rect.x = x
-        # Move button down by 5 pixels
-        self.rect.bottom = y + 9
+        self.rect.bottom = y
         
         # Button state variables
         self.is_pressed = False
         self.cooldown = 0
         self.player_on_button = False
-        self.is_button_pressed = False  # Renamed from button_pressed to avoid confusion
-        self.already_activated = False  # Track if button was already used during this contact
+        self.button_pressed = False
         
         # Update glow effect for larger size
         self.glow_images = []
@@ -376,23 +441,18 @@ class InfoButton(pygame.sprite.Sprite):
         if self.cooldown > 0:
             self.cooldown -= 1
         
-        # Debug button state
-        if self.player_on_button:
-            print(f"Player on button, is_pressed={self.is_button_pressed}, activated={self.already_activated}")
-        
-        # Simple button press state logic
-        if self.player_on_button and not self.is_button_pressed:
-            self.is_button_pressed = True
-            self.image = self.button_pressed
-        elif not self.player_on_button and self.is_button_pressed:
-            self.is_button_pressed = False
+        # Reset button_pressed when player is not on button
+        if not self.player_on_button:
+            self.button_pressed = False
             self.image = self.button_normal
-            
-        # Validate image is a surface
-        if not isinstance(self.image, pygame.Surface):
-            print(f"Warning: Button image is not a valid surface")
-            self.image = pygame.Surface((self.width, self.height))
-            self.image.fill((255, 0, 0))  # Red fallback
+        else:
+            self.image = self.button_pressed
+        
+        # Animate glow
+        self.glow_timer += 1
+        if self.glow_timer > 5:
+            self.glow_timer = 0
+            self.glow_index = (self.glow_index + 1) % len(self.glow_images)
 
 class InfoBubble(pygame.sprite.Sprite):
     def __init__(self, x, y, fact_index, parent_button, planet_facts, quiz_system=None, planet_name=None):
@@ -410,7 +470,7 @@ class InfoBubble(pygame.sprite.Sprite):
         self.full_text = self.fact_text
         
         # Create separate surface for exit text
-        self.exit_text = " "
+        self.exit_text = "Press Escape to exit"
         self.exit_surface = self.font.render(self.exit_text, True, (255, 255, 255))
         self.exit_rect = self.exit_surface.get_rect()
         
@@ -476,8 +536,8 @@ class InfoBubble(pygame.sprite.Sprite):
         return lines
 
     def create_surface(self):
-        # Calculate height based on wrapped text
-        line_height = self.font.get_height()
+        # Calculate required height for all lines
+        line_height = self.font.get_linesize()
         total_height = (len(self.wrapped_text) * line_height) + (self.padding * 2)
         
         # Create surface
@@ -500,12 +560,6 @@ class InfoBubble(pygame.sprite.Sprite):
                 text_surface = self.font.render(render_text, True, BLACK)
                 self.image.blit(text_surface, (self.padding, y_offset))
             y_offset += line_height
-            
-        # Validate image is a surface
-        if not isinstance(self.image, pygame.Surface):
-            print(f"Warning: Created invalid surface in InfoBubble")
-            self.image = pygame.Surface((self.max_width + self.padding * 2, total_height))
-            self.image.fill((200, 200, 200))  # Gray fallback
 
     def handle_key_press(self, key):
         if not self.current_question or self.show_result:
@@ -726,17 +780,15 @@ class Player(pygame.sprite.Sprite):
             'running': [self.fallback_frame],
             'jumping': [self.fallback_frame]
         }
+        
+        # Try to load animations
+        self.load_all_animations()
+        
+        # Set initial animation
         self.current_animation = 'idle'
-        self.current_frame_index = 0
+        self.animation_frame = 0
         self.animation_timer = 0
-        self.animation_speed = 10  # Slowed down animation speed
-        self.animation_state = 'idle'
-        
-        self.image = self.animations['idle'][0]  # Set the initial image
-        
-        # Ensure we always have a valid fallback
-        if not isinstance(self.image, pygame.Surface):
-            self.image = self.fallback_frame
+        self.animation_speed = 0.15
         
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -755,62 +807,72 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
     
     def load_all_animations(self):
-        # Remove loading of animations from files
-        self.animations['idle'] = [self.fallback_frame]
-        self.animations['running'] = [self.fallback_frame]
-        self.animations['jumping'] = [self.fallback_frame]
+        # Try to load each animation
+        if self.load_animation('idle', 1):
+            self.animations['idle'] = self.load_animation('idle', 1)
+        if self.load_animation('running', 8):
+            self.animations['running'] = self.load_animation('running', 8)
+        if self.load_animation('jumping', 1):
+            self.animations['jumping'] = self.load_animation('jumping', 1)
+
+    def load_animation(self, animation_name, frame_count):
+        frames = []
+        animation_path = os.path.join('assets', 'animations', animation_name)
+        
+        try:
+            # First check if the directory exists
+            if not os.path.exists(animation_path):
+                print(f"Warning: Animation directory not found: {animation_path}")
+                return [self.fallback_frame]
+            
+            # Load frames using the specific naming convention
+            for i in range(1, frame_count + 1):
+                frame_name = f"{animation_name}Frame{i}.png"
+                frame_path = os.path.join(animation_path, frame_name)
+                
+                if os.path.exists(frame_path):
+                    try:
+                        frame = pygame.image.load(frame_path).convert_alpha()
+                        frame = pygame.transform.scale(frame, (self.width, self.height))
+                        frames.append(frame)
+                    except pygame.error as e:
+                        print(f"Error loading frame {frame_name}: {e}")
+                        return [self.fallback_frame]
+                else:
+                    print(f"Frame not found: {frame_path}")
+                    return [self.fallback_frame]
+            
+            return frames if frames else [self.fallback_frame]
+            
+        except Exception as e:
+            print(f"Error in load_animation: {e}")
+            return [self.fallback_frame]
 
     def update(self):
         # Get keyboard state
         keys = pygame.key.get_pressed()
-
+        
         # Horizontal movement
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.rect.x -= self.speed
-            self.change_x = -self.speed
-            self.facing_right = False
-        elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.rect.x += self.speed
-            self.change_x = self.speed
-            self.facing_right = True
-        else:
-            self.change_x = 0
-
+            
         # Jumping
         if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground:
             self.velocity_y = self.jump_speed
             self.on_ground = False
-            self.is_jumping = True
-
+            
         # Apply gravity
         self.velocity_y += self.gravity
         self.rect.y += self.velocity_y
-
-        # Check if player is on the ground
-        self.rect.y += 2
-        platform_hit_list = pygame.sprite.spritecollide(self, self.platforms, False)
-        self.rect.y -= 2
-
-        if platform_hit_list:
-            self.on_ground = True
-            self.is_jumping = False
-            # Set player on top of the platform
-            if self.velocity_y > 0:
-                self.rect.bottom = platform_hit_list[0].rect.top
-                self.velocity_y = 0
-        else:
-            self.on_ground = False
-
+        
         # Keep player in bounds
         if self.rect.left < 0:
             self.rect.left = 0
-        if self.rect.right > WORLD_WIDTH:
-            self.rect.right = WORLD_WIDTH
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > WORLD_HEIGHT:
-            self.rect.bottom = WORLD_HEIGHT
-
+        if self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
+        
         # Update animation state with safety checks
         try:
             if self.is_jumping:
@@ -819,36 +881,31 @@ class Player(pygame.sprite.Sprite):
                 self.current_animation = 'running'
             else:
                 self.current_animation = 'idle'
-
+            
             # Safely get the current animation frames
             current_frames = self.animations.get(self.current_animation, [self.fallback_frame])
             if not current_frames:
                 current_frames = [self.fallback_frame]
-
+            
             # Update animation frame
             self.animation_timer += self.animation_speed
             if self.animation_timer >= 1:
                 self.animation_timer = 0
-                self.current_frame_index = (self.current_frame_index + 1) % len(current_frames)
-
+                self.animation_frame = (self.animation_frame + 1) % len(current_frames)
+            
             # Safely get current frame
-            current_frame = current_frames[min(self.current_frame_index, len(current_frames) - 1)]
-
+            current_frame = current_frames[min(self.animation_frame, len(current_frames) - 1)]
+            
             # Update image
             if not self.facing_right:
                 self.image = pygame.transform.flip(current_frame, True, False)
             else:
                 self.image = current_frame
-
-            # Validate image is a surface
-            if not isinstance(self.image, pygame.Surface):
-                print(f"Warning: Player image is not a valid surface")
-                self.image = self.fallback_frame
-
+                
         except Exception as e:
             print(f"Animation error: {e}")
             self.image = self.fallback_frame
-
+    
     def jump(self):
         # Check if we're standing on a platform
         self.rect.y += 2
@@ -869,23 +926,6 @@ class Player(pygame.sprite.Sprite):
     
     def stop(self):
         self.change_x = 0
-
-class StarrySky:
-    def __init__(self, width, height, num_stars=100):
-        self.width = width
-        self.height = height
-        self.stars = [
-            (random.randint(0, width), random.randint(0, height), random.randint(1, 3), (255, 255, 255))
-            for _ in range(num_stars)
-        ]
-
-    def draw(self, screen, camera_x):
-        for x, y, radius, color in self.stars:
-            parallax_x = (-camera_x * 0.2)
-            star_x = (x + parallax_x) % self.width
-            brightness = abs(math.sin(pygame.time.get_ticks() * 0.001 + x * 0.1))
-            twinkle_color = tuple(int(c * brightness) for c in color)
-            pygame.draw.circle(screen, twinkle_color, (int(star_x), y), radius)
 
 class PlanetPlatformer:
     def __init__(self, planet_name, planet_color, planet_facts, background_color=(0, 0, 0)):
@@ -936,8 +976,6 @@ class PlanetPlatformer:
         self.game_state = "main"  # Can be "main", "facts", "quiz"
         self.previous_state = None
 
-        self.starry_sky = StarrySky(WORLD_WIDTH, WORLD_HEIGHT)
-
     def create_level(self):
         # Create ground
         ground_y = SCREEN_HEIGHT - TILE_SIZE
@@ -955,40 +993,32 @@ class PlanetPlatformer:
             self.info_buttons.add(button)
             self.all_sprites.add(button)
 
-    def setup_fact_bubble(self, button):
-        # Set button cooldown
-        button.cooldown = 30
-        
-        # Remove existing info bubbles
-        for bubble in self.info_bubbles:
-            bubble.kill()
-        self.info_bubbles.empty()
-        
-        # Create new info bubble
-        index = list(self.info_buttons).index(button)
-        bubble = InfoBubble(
-            self.player.rect.centerx,
-            200,
-            index,
-            button,
-            self.planet_facts,
-            self.quiz_system,
-            self.planet_name
-        )
-        bubble.parent_game = self  # Set the reference to the game
-        self.info_bubbles.add(bubble)
-        self.all_sprites.add(bubble)
-
     def check_button_collisions(self):
         for button in self.info_buttons:
-            button.player_on_button = pygame.sprite.collide_rect(self.player, button)
-            
-            if button.player_on_button and button.cooldown == 0 and not button.already_activated:
-                # Handle button activation logic
-                self.setup_fact_bubble(button)
-                button.already_activated = True
-            elif not button.player_on_button:
-                button.already_activated = False
+            if pygame.sprite.collide_rect(self.player, button):
+                if not button.button_pressed and button.cooldown == 0:
+                    button.button_pressed = True  # Mark button as pressed
+                    button.cooldown = 30
+                    
+                    # Remove existing info bubbles
+                    for bubble in self.info_bubbles:
+                        bubble.kill()
+                    self.info_bubbles.empty()
+                    
+                    # Create new info bubble
+                    index = list(self.info_buttons).index(button)
+                    bubble = InfoBubble(
+                        self.player.rect.centerx,
+                        200,
+                        index,
+                        button,
+                        self.planet_facts,
+                        self.quiz_system,
+                        self.planet_name
+                    )
+                    bubble.parent_game = self  # Set the reference to the game
+                    self.info_bubbles.add(bubble)
+                    self.all_sprites.add(bubble)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -1041,13 +1071,8 @@ class PlanetPlatformer:
                 self.player.update()
                 self.all_sprites.update()
                 
-                # Update camera
-                self.camera.update(self.player)
-                
                 # Draw everything
-                self.starry_sky.draw(self.screen, self.camera.x)
-                for entity in self.all_sprites:
-                    self.screen.blit(entity.image, self.camera.apply(entity))
+                self.all_sprites.draw(self.screen)
                 
                 # Handle events
                 for event in pygame.event.get():
@@ -1153,55 +1178,55 @@ if __name__ == "__main__":
     ]
     
     jupiter_facts = [
-        "Jupiter is the largest planet in our solar system.",
-        "Jupiter's Great Red Spot is a giant storm lasting over 400 years.",
-        "Jupiter has at least 79 moons.",
-        "Jupiter's magnetic field is the strongest of all planets.",
-        "Jupiter rotates faster than any other planet.",
-        "Jupiter's atmosphere is mostly hydrogen and helium.",
-        "Jupiter's mass is more than twice that of all other planets combined.",
-        "Jupiter's day is only about 10 Earth hours long.",
-        "Jupiter has a faint ring system.",
-        "Jupiter's moon Ganymede is larger than Mercury."
+        "Jupiter is the largest planet in our solar system.\n\n                                Press Escape to exit",
+        "Jupiter's Great Red Spot is a giant storm lasting over 400 years.\n\n                                Press Escape to exit",
+        "Jupiter has at least 79 moons.\n\n                                Press Escape to exit",
+        "Jupiter's magnetic field is the strongest of all planets.\n\n                                Press Escape to exit",
+        "Jupiter rotates faster than any other planet.\n\n                                Press Escape to exit",
+        "Jupiter's atmosphere is mostly hydrogen and helium.\n\n                                Press Escape to exit",
+        "Jupiter's mass is more than twice that of all other planets combined.\n\n                                Press Escape to exit",
+        "Jupiter's day is only about 10 Earth hours long.\n\n                                Press Escape to exit",
+        "Jupiter has a faint ring system.\n\n                                Press Escape to exit",
+        "Jupiter's moon Ganymede is larger than Mercury.\n\n                                Press Escape to exit"
     ]
     
     saturn_facts = [
-        "Saturn's rings are mostly made of ice and rock.",
-        "Saturn could float in water due to its low density.",
-        "Saturn has at least 82 moons.",
-        "Saturn's largest moon Titan has a thick atmosphere.",
-        "Saturn's rings span up to 175,000 miles wide.",
-        "Saturn's average temperature is -178°C (-288°F).",
-        "Saturn completes one orbit around the Sun in 29.5 Earth years.",
-        "Saturn's wind speeds can reach 1,100 mph.",
-        "Saturn's rings are only about 30 feet thick on average.",
-        "Saturn has hexagonal-shaped storms at its poles."
+        "Saturn's rings are mostly made of ice and rock.\n\n                                Press Escape to exit",
+        "Saturn could float in water due to its low density.\n\n                                Press Escape to exit",
+        "Saturn has at least 82 moons.\n\n                                Press Escape to exit",
+        "Saturn's largest moon Titan has a thick atmosphere.\n\n                                Press Escape to exit",
+        "Saturn's rings span up to 175,000 miles wide.\n\n                                Press Escape to exit",
+        "Saturn's average temperature is -178°C (-288°F).\n\n                                Press Escape to exit",
+        "Saturn completes one orbit around the Sun in 29.5 Earth years.\n\n                                Press Escape to exit",
+        "Saturn's wind speeds can reach 1,100 mph.\n\n                                Press Escape to exit",
+        "Saturn's rings are only about 30 feet thick on average.\n\n                                Press Escape to exit",
+        "Saturn has hexagonal-shaped storms at its poles.\n\n                                Press Escape to exit"
     ]
     
     uranus_facts = [
-        "Uranus rotates on its side, unlike other planets.",
-        "Uranus was the first planet discovered using a telescope.",
-        "Uranus has 27 known moons.",
-        "Uranus is an ice giant planet.",
-        "Uranus has 13 known rings.",
-        "Uranus takes 84 Earth years to orbit the Sun.",
-        "Uranus is the coldest planet with temperatures of -224°C.",
-        "Uranus's moons are named after literary characters.",
-        "Uranus appears blue-green due to methane in its atmosphere.",
-        "Uranus has extreme seasons lasting 20 Earth years."
+        "Uranus rotates on its side, unlike other planets.\n\n                                Press Escape to exit",
+        "Uranus was the first planet discovered using a telescope.\n\n                                Press Escape to exit",
+        "Uranus has 27 known moons.\n\n                                Press Escape to exit",
+        "Uranus is an ice giant planet.\n\n                                Press Escape to exit",
+        "Uranus has 13 known rings.\n\n                                Press Escape to exit",
+        "Uranus takes 84 Earth years to orbit the Sun.\n\n                                Press Escape to exit",
+        "Uranus is the coldest planet with temperatures of -224°C.\n\n                                Press Escape to exit",
+        "Uranus's moons are named after literary characters.\n\n                                Press Escape to exit",
+        "Uranus appears blue-green due to methane in its atmosphere.\n\n                                Press Escape to exit",
+        "Uranus has extreme seasons lasting 20 Earth years.\n\n                                Press Escape to exit"
     ]
     
     neptune_facts = [
-        "Neptune has the strongest winds in the solar system.",
-        "Neptune was discovered through mathematical predictions.",
-        "Neptune has 14 known moons.",
-        "Neptune's largest moon Triton orbits backwards.",
-        "Neptune has five main rings.",
-        "Neptune takes 165 Earth years to orbit the Sun.",
-        "Neptune's winds can reach speeds of 1,200 mph.",
-        "Neptune has a Great Dark Spot similar to Jupiter's Great Red Spot.",
-        "Neptune is the densest giant planet.",
-        "Neptune's atmosphere contains methane, giving it its blue color."
+        "Neptune has the strongest winds in the solar system.\n\n                                Press Escape to exit",
+        "Neptune was discovered through mathematical predictions.\n\n                                Press Escape to exit",
+        "Neptune has 14 known moons.\n\n                                Press Escape to exit",
+        "Neptune's largest moon Triton orbits backwards.\n\n                                Press Escape to exit",
+        "Neptune has five main rings.\n\n                                Press Escape to exit",
+        "Neptune takes 165 Earth years to orbit the Sun.\n\n                                Press Escape to exit",
+        "Neptune's winds can reach speeds of 1,200 mph.\n\n                                Press Escape to exit",
+        "Neptune has a Great Dark Spot similar to Jupiter's Great Red Spot.\n\n                                Press Escape to exit",
+        "Neptune is the densest giant planet.\n\n                                Press Escape to exit",
+        "Neptune's atmosphere contains methane, giving it its blue color.\n\n                                Press Escape to exit"
     ]
     
     # Create and run the game

@@ -524,7 +524,6 @@ class Rocket:
         self.max_speed = 5
         self.size = 20
         self.thrust = False
-        self.particles = []
         self.thrust_start_time = 0
         self.fire_colors = [
             (255, 69, 0),    # Red-Orange
@@ -748,33 +747,28 @@ class InfoScreen:
         exit_text = self.font_info.render("Press ESC to return to space", True, WHITE)
         screen.blit(exit_text, (WIDTH//2 - exit_text.get_width()//2, HEIGHT - 100))
 
+
+
 class QuizScreen:
     def __init__(self, planet_name, parent):
         self.parent = parent
-        try:
-            font_path = os.path.join("fonts", "PressStart2P-Regular.ttf")
-            self.font = pygame.font.Font(font_path, 16)
-        except:
-            print("Could not load custom font for QuizScreen, falling back to system font")
-            self.font = pygame.font.SysFont('courier', 36)
         self.planet_name = planet_name
         self.show_correct_answer = False
-        
-        # Adjust option boxes to be wider
-        self.options = {
-            'answer1': {'rect': pygame.Rect(WIDTH//4 - 200, HEIGHT//2 - 100, 400, 50), 'color': (100, 100, 200)},
-            'answer2': {'rect': pygame.Rect(WIDTH*3//4 - 200, HEIGHT//2 - 100, 400, 50), 'color': (100, 100, 200)},
-            'answer3': {'rect': pygame.Rect(WIDTH//4 - 200, HEIGHT//2 + 50, 400, 50), 'color': (100, 100, 200)},
-            'answer4': {'rect': pygame.Rect(WIDTH*3//4 - 200, HEIGHT//2 + 50, 400, 50), 'color': (100, 100, 200)},
-            'back': {'rect': pygame.Rect(WIDTH//2 - 120, HEIGHT - 60, 240, 40), 'color': (100, 100, 200)}
-        }
-        
+        self.current_question = None  # Initialize current_question here
         self.used_questions = []
         self.result = None
         self.result_timer = 0
         self.rocket_reset_position = False
         self.stars = [(randint(0, WIDTH), randint(0, HEIGHT), random() * 2, choice(STAR_COLORS)) 
                      for _ in range(100)]
+
+        # Initialize font
+        try:
+            font_path = os.path.join("fonts", "PressStart2P-Regular.ttf")
+            self.font = pygame.font.Font(font_path, 16)  # Set the desired font size
+        except:
+            print("Could not load custom font for QuizScreen, falling back to system font")
+            self.font = pygame.font.SysFont('courier', 36)  # Fallback to a system font
 
         # Get planet-specific questions
         self.questions = self.get_questions_for_planet(planet_name)
@@ -787,16 +781,16 @@ class QuizScreen:
                 "answers": ["Option 1", "Option 2", "Option 3", "Option 4"],
                 "correct": 0
             }
-
-        # Add particle system for correct answer effect
-        self.particles = []
-        self.particle_colors = [
-            (100, 255, 100),  # Light green
-            (50, 200, 50),    # Medium green
-            (0, 255, 0),      # Bright green
-            (150, 255, 150)   # Pale green
-        ]
-
+        
+        # Adjust option boxes to be wider
+        self.options = {
+            'answer1': {'rect': pygame.Rect(WIDTH//4 - 200, HEIGHT//2 - 100, 400, 50), 'color': (100, 100, 200)},
+            'answer2': {'rect': pygame.Rect(WIDTH*3//4 - 200, HEIGHT//2 - 100, 400, 50), 'color': (100, 100, 200)},
+            'answer3': {'rect': pygame.Rect(WIDTH//4 - 200, HEIGHT//2 + 50, 400, 50), 'color': (100, 100, 200)},
+            'answer4': {'rect': pygame.Rect(WIDTH*3//4 - 200, HEIGHT//2 + 50, 400, 50), 'color': (100, 100, 200)},
+            'back': {'rect': pygame.Rect(WIDTH//2 - 120, HEIGHT - 60, 240, 40), 'color': (100, 100, 200)}
+        }
+        
     def get_questions_for_planet(self, planet_name):
         if planet_name == "Sun":
             return [
@@ -1545,7 +1539,7 @@ class QuizScreen:
                 'dy': math.sin(angle) * speed,
                 'life': 60,  # Particle lifetime in frames
                 'color': choice(self.particle_colors),
-                'size': random() * 3 + 1
+                'size': random() * 0
             })
 
     def update_particles(self):
@@ -1556,7 +1550,7 @@ class QuizScreen:
             particle['life'] -= 1
             if particle['life'] <= 0:
                 self.particles.remove(particle)
-
+    
     def draw_particles(self, screen):
         # Draw all active particles
         for particle in self.particles:
@@ -1586,19 +1580,17 @@ class QuizScreen:
         if self.result is not None:
             if self.result_timer <= 0:
                 if self.show_correct_answer:
-                    self.get_new_question()
                     self.show_correct_answer = False
-                else:
-                    self.show_correct_answer = True
-                    self.result_timer = 180
                 self.result = None
-            return None
+                return None
 
         for i, (key, data) in enumerate(self.options.items()):
             if key != 'back' and rocket_rect.colliderect(data['rect']):
                 if i == self.current_question['correct']:
                     self.result = True
                     self.result_timer = 60
+                    # Set animation to jumping when correct
+                    self.current_animation = 'jumping'
                     # Create particle effect at rocket position
                     self.create_success_particles(rocket_rect.centerx, rocket_rect.centery)
                     # Add score for correct answer
@@ -1606,14 +1598,18 @@ class QuizScreen:
                         self.parent.add_score(10, WIDTH//2, HEIGHT//2)
                     except:
                         print("Could not add score")
+                    pygame.time.set_timer(pygame.USEREVENT + 1, 1500)  # Set timer for 1.5 seconds
+                    
+                    # Change question only if it hasn't been changed yet
+                    if self.question_changed == False:
+                        self.question_changed = True 
+                        self.get_new_question() 
                 else:
                     self.result = False
                     self.result_timer = 120
-                    # Subtract score for wrong answer
-                    try:
-                        self.parent.add_score(-5, WIDTH//2, HEIGHT//2)
-                    except:
-                        print("Could not subtract score")
+                    # Set animation to idle when wrong
+                    self.current_animation = 'idle'
+                    self.question_changed = False  # Reset state if the answer is wrong
                 self.rocket_reset_position = True
                 return None
             elif key == 'back' and rocket_rect.colliderect(data['rect']):
@@ -1636,7 +1632,7 @@ class QuizScreen:
         question_surface = self.font.render(self.current_question["question"], True, WHITE)
         question_rect = question_surface.get_rect(center=(WIDTH//2, HEIGHT//4))
         screen.blit(question_surface, question_rect)
-
+        
         # Draw answer options
         for i, (key, data) in enumerate(self.options.items()):
             if key == 'back':
@@ -1686,11 +1682,20 @@ class QuizScreen:
             if self.result_timer <= 0:
                 self.result = None
 
+        # Draw particles
+        self.draw_particles(screen)
+
     def reset_rocket(self, rocket):
         rocket.x = WIDTH // 2  # Center horizontally
         rocket.y = HEIGHT * 3 // 4  # Changed from HEIGHT // 2 to HEIGHT * 3 // 4
         rocket.speed = 0
         self.rocket_reset_position = False
+        # Reset animation to running
+        self.current_animation = 'running'
+
+    def trigger_particle_effect(self):
+        # Code for creating and displaying particle effects
+        pass  # Remove or comment out this method
 
 class SpaceExplorer:
     def __init__(self):
@@ -1766,7 +1771,7 @@ class SpaceExplorer:
         
         # Add development button with increased width
         self.dev_button = {
-            'rect': pygame.Rect(WIDTH//2 - 200, HEIGHT//2 + 150, 400, 80),  # Increased width from 300 to 400
+            'rect': pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 500, 80),  # Increased width from 300 to 400
             'color': (100, 200, 100),
             'hover': False
         }
@@ -2276,7 +2281,8 @@ class SpaceExplorer:
                                 self.in_dev_mode = True
                                 self.rocket.x = WIDTH // 2
                                 self.rocket.y = HEIGHT // 2
-
+                if event.type == pygame.USEREVENT + 1:
+                    print("Questions loaded")       
             # Update space objects for all game states except menu
             if not self.in_menu:
                 self.update_space_objects()
