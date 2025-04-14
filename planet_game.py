@@ -1,7 +1,7 @@
 import pygame
 import os
 from planet_platformer import PlanetPlatformer, Player
-from space import planets
+from space5 import planets
 
 def main():
     # Initialize Pygame
