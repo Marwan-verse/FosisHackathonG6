@@ -77,6 +77,9 @@ planets = {
             
             "The planet's surface is covered in wrinkles called scarps, formed as Mercury's core cooled and shrank. These scarps can be up to a mile high and hundreds of miles long."
         ]
+
+
+        #hello
     },
     "Venus": {
         "color": (218, 165, 32),  # Golden
@@ -1660,6 +1663,7 @@ class SpaceExplorer:
             # Update space objects for all game states except menu
             if not self.in_menu:
                 self.update_space_objects()
+                #  hello Update menu alpha for glow effect
 
             # Update button hover states in menu
             if self.in_menu:
